@@ -25,39 +25,11 @@
  * along with waysome. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __WS_COMPOSITOR_MODULE_H__
-#define __WS_COMPOSITOR_MODULE_H__
-
-#include "EGL/egl.h"
-#include "wayland-server.h"
-
-struct egl_display {
-    EGLDisplay display;
-    EGLint major;
-    EGLint minor;
-};
-
-struct waysome_compositor {
-    struct egl_display egl_disp;
-};
+#include "output.h"
 
 void
-compositor_init(
+output_composited(
     void
-);
-
-void
-compositor_create_surface(
-    struct wl_client* client,
-    struct wl_resource* res,
-    uint32_t id
-);
-
-void
-compositor_create_region(
-    struct wl_client* client,
-    struct wl_resource* res,
-    uint32_t id
-);
-
-#endif // __WS_COMPOSITOR_MODULE_H__
+) {
+// TODO
+}
