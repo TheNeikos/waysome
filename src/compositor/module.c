@@ -71,7 +71,7 @@ find_connector_with_crtc(
  *  - can be used to access the monitor passed to the function
  * and sets the crtc for a monitor
  *
- *  @returns 0 or a negative error value
+ * @returns 0 or a negative error value (-NOENT)
  */
 static int
 find_crtc(
