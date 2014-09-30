@@ -88,8 +88,8 @@ get_framebuffer_device(
  * This function deinitialises the compositor.
  * It does not take care of inter-module dependency nor does it check whether
  * it was called before, unlike ws_compositor_init().
- * This function should only be called from the main function itself.
  *
+ * @warning call this function only once
  */
 static void
 ws_compositor_deinit(
