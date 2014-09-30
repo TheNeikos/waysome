@@ -35,6 +35,8 @@
 #include <unistd.h>
 #include <xf86drm.h>
 
+#include "util/cleaner.h"
+
 
 /**
  * Internal compositor context
@@ -218,6 +220,21 @@ get_framebuffer_device(
 }
 
 
+/**
+ * Deinitialise the compositor
+ *
+ * This function deinitialises the compositor.
+ * It does not take care of inter-module dependency nor does it check whether
+ * it was called before, unlike ws_compositor_init().
+ * This function should only be called from the main function itself.
+ *
+ */
+static void
+ws_compositor_deinit(
+    void* dummy
+);
+
+
 /*
  *
  * Interface implementation
@@ -230,6 +247,8 @@ ws_compositor_init(void) {
     if (is_init) {
         return 0;
     }
+
+    ws_cleaner_add(ws_compositor_deinit, NULL);
 
     get_framebuffer_device("/dev/dri/card0");
 
@@ -245,8 +264,18 @@ ws_compositor_init(void) {
     return 0;
 }
 
-void
-ws_compositor_deinit(void) {
+
+/*
+ *
+ * Internal implementation
+ *
+ */
+
+
+static void
+ws_compositor_deinit(
+    void* dummy
+) {
 
     if (comp_ctx.fb.fd >= 0) {
         close(comp_ctx.fb.fd);
