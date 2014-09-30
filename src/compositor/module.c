@@ -56,7 +56,7 @@ static struct ws_compositor_context{
  *
  * @return -1 if a connector exists, 0 otherwise
  */
-static int
+static struct ws_monitor*
 find_connector_with_crtc(
     int crtc
 );
@@ -175,16 +175,16 @@ ws_compositor_deinit(
     //!< @todo: prelimary: free the preloaded PNG
 }
 
-static int
+static struct ws_monitor*
 find_connector_with_crtc(
-    int crtc
+        int crtc
 ) {
     for(struct ws_monitor* iter = comp_ctx.conns; iter; iter = iter->next) {
         if (iter->crtc == (uint32_t)crtc) {
-            return -1;
+            return iter;
         }
     }
-    return 0;
+    return NULL;
 }
 
 static int
@@ -208,9 +208,9 @@ find_crtc(
         if (enc->crtc_id) {
             crtc = enc->crtc_id;
 
-            int ret = find_connector_with_crtc(crtc);
 
-            if (ret >= 0) {
+
+            if (find_connector_with_crtc(crtc) != NULL) {
                 drmModeFreeEncoder(enc);
                 connector->crtc = crtc;
                 return 0;
@@ -236,10 +236,9 @@ find_crtc(
 
             // Check noone else uses it!
             crtc = res->crtcs[j];
-            int ret = find_connector_with_crtc(crtc);
 
             // Looks like we found one! Return!
-            if (ret >= 0) {
+            if (find_connector_with_crtc(crtc) != NULL) {
                 drmModeFreeEncoder(enc);
                 connector->crtc = crtc;
                 return 0;
@@ -300,8 +299,8 @@ populate_connectors(void) {
         (*connector)->width = conn->modes[0].hdisplay;
         (*connector)->height = conn->modes[0].vdisplay;
 
-        int ret = find_crtc(res, conn, *connector);
-        if (ret < 0) {
+
+        if (find_crtc(res, conn, *connector) < 0) {
             //!< @todo: Log error about not finding crtcs
             (*connector)->connected = 0;
             continue;
