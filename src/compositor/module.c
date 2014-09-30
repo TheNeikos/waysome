@@ -27,3 +27,48 @@
 
 #include "compositor/module.h"
 
+#include <stdbool.h>
+
+/**
+ * Internal compositor context
+ * 
+ * This context holds the internal state of the compositor.
+ */
+static struct {
+} comp_ctx;
+
+
+/*
+ *
+ * Interface implementation
+ *
+ */
+
+int
+ws_compositor_init(void) {
+    static bool is_init = false;
+    if (is_init) {
+        return 0;
+    }
+
+    //!< @todo: open framebuffer device by hardcoded path
+
+    //!< @todo: get all the connectors
+
+    //!< @todo: create a framebuffer for each connector
+
+    //!< @todo: prelimary: preload a PNG from a hardcoded path
+
+    //!< @todo: prelimary: blit the preloaded PNG on each of the frame buffers
+
+    is_init = true;
+    return -1;
+}
+
+void
+ws_compositor_deinit(void) {
+    //!< @todo: free all of the framebuffers
+
+    //!< @todo: prelimary: free the preloaded PNG
+}
+
