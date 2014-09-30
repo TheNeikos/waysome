@@ -48,6 +48,14 @@ static struct ws_compositor_context{
     struct ws_monitor* conns; //<! A linked list of ws_monitors
 } comp_ctx;
 
+/**
+ * Find the connector associated with a crtc id
+ *
+ * This function iterates over all connectors, searching for a connector with
+ * the id specified.
+ *
+ * @return -1 if a connector exists, 0 otherwise
+ */
 static int
 find_connector_with_crtc(
     int crtc
