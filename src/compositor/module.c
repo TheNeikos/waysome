@@ -62,6 +62,17 @@ find_connector_with_crtc(
 );
 
 
+/**
+ * Find a suitable connector and return it's id
+ *
+ * This function tries to find a connector which is
+ *  - free
+ *  - matches the encoding
+ *  - can be used to access the monitor passed to the function
+ * and sets the crtc for a monitor
+ *
+ *  @returns 0 or a negative error value
+ */
 static int
 find_crtc(
     drmModeRes* res,
