@@ -305,8 +305,7 @@ get_framebuffer_device(
     const char* path
 ) {
     int fd = open(path, O_RDWR | O_CLOEXEC);
-    if (fd < 0)
-    {
+    if (fd < 0) {
         // TODO: Log Error!
         return -ENOENT;
     }
