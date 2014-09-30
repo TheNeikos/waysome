@@ -67,8 +67,7 @@ find_crtc(
  * This writes directly into the given compositor context
  */
 static int
-populate_connectors(
-);
+populate_connectors(void);
 
 
 /**
@@ -236,8 +235,7 @@ find_crtc(
 }
 
 static int
-populate_connectors(
-) {
+populate_connectors(void) {
     drmModeRes* res;
     drmModeConnector* conn;
     struct ws_monitor** connector = &comp_ctx.conns;
