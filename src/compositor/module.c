@@ -146,9 +146,9 @@ ws_compositor_deinit(
     struct ws_monitor* it = comp_ctx.conns;
 
     while(it) {
-        struct ws_monitor* tmp = it->next;
+        struct ws_monitor* next = it->next;
         free(it);
-        it = tmp;
+        it = next;
     }
 
     //!< @todo: free all of the framebuffers
