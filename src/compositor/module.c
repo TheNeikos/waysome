@@ -213,7 +213,7 @@ find_crtc(
         enc = drmModeGetEncoder(comp_ctx.fb.fd, conn->encoders[i]);
 
         if (!enc) {
-            // TODO: Log Error!
+            //!< @todo: Log Error!
             continue;
         }
 
@@ -238,7 +238,7 @@ find_crtc(
         drmModeFreeEncoder(enc);
     }
 
-    // TODO: Log Error! No CRTC FOUND!!!
+    //!< @todo: Log Error! No CRTC FOUND!!!
     return -ENOENT;
 }
 
@@ -250,7 +250,7 @@ populate_connectors(void) {
 
     res = drmModeGetResources(comp_ctx.fb.fd);
     if (!res) {
-        // TODO: Log Error
+        //!< @todo: Log Error
         return -ENOENT;
     }
 
@@ -259,7 +259,7 @@ populate_connectors(void) {
     while(i--) {
         conn = drmModeGetConnector(comp_ctx.fb.fd, res->connectors[i]);
         if (!conn) {
-            // TODO: Log Error
+            //!< @todo: Log Error
             continue;
         }
         if (*connector) {
@@ -271,18 +271,18 @@ populate_connectors(void) {
         (*connector)->conn = conn->connector_id;
 
         if (conn->connection != DRM_MODE_CONNECTED) {
-            // TODO: Log Unused
+            //!< @todo: Log Unused
             (*connector)->connected = 0;
             continue;
         }
 
         if (conn->count_modes == 0) {
-            // TODO: Log No Valid Modes
+            //!< @todo: Log No Valid Modes
             (*connector)->connected = 0;
             continue;
         }
 
-        // TODO: Do not just take the biggest mode available
+        //!< @todo: Do not just take the biggest mode available
         memcpy(&(*connector)->mode, &conn->modes[0],
                 sizeof((*connector)->mode));
 
@@ -291,7 +291,7 @@ populate_connectors(void) {
 
         int ret = find_crtc(res, conn, *connector);
         if (ret < 0) {
-            // TODO: Log error about not finding crtcs
+            //!< @todo: Log error about not finding crtcs
             (*connector)->connected = 0;
             continue;
         }
@@ -306,13 +306,13 @@ get_framebuffer_device(
 ) {
     int fd = open(path, O_RDWR | O_CLOEXEC);
     if (fd < 0) {
-        // TODO: Log Error!
+        //!< @todo: Log Error!
         return -ENOENT;
     }
 
     uint64_t has_dumb;
     if (drmGetCap(fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
-        //TODO: Log Error!
+        //!< @todo: Log Error!
         close(fd);
         return -EOPNOTSUPP;
     }
