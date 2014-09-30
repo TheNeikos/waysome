@@ -71,7 +71,7 @@ populate_connectors(void);
 
 
 /**
- * Get a Frambuffer Device provided by DRM using the given path
+ * Get a Framebuffer Device provided by DRM using the given path
  *
  * This is the graphic card device that is given by the kernel. It loads it
  * and populates the given framebuffer with the information found.
