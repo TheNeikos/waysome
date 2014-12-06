@@ -184,5 +184,6 @@ uuid_callback(
     struct ws_object* self
 ) {
     struct ws_wayland_obj* o = (struct ws_wayland_obj*) self;
-    return (uintmax_t) wl_resource_get_id(o->resource);
+    return ((uintmax_t) wl_resource_get_id(o->resource)) +
+           ((uintmax_t) self);
 }
