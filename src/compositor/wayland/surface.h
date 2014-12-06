@@ -53,6 +53,12 @@ struct ws_surface {
     int32_t y; //!< @public y position of this surface
     int32_t width; //!< @public width of the surface
     int32_t height; //!< @public height of the surface
+    struct {
+        struct ws_wayland_buffer commit_buf; //!< @private buffer for commit
+        int32_t flags; //!< @private bit flags about the current commit status
+        int32_t x; //!< @public possible x position of this surface
+        int32_t y; //!< @public possible y position of this surface
+    } commit; //!< @private members about the current commit
 };
 
 /**
