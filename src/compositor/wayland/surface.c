@@ -45,6 +45,13 @@
  */
 #define WAYLAND_SURFACE_VERSION (1)
 
+/**
+ * Constants used for the commit system for compositing
+ */
+
+#define SURFACE_BUFFER_ATTACHED (1 << 1)
+#define SURFACE_DAMAGED (1 << 2)
+
 /*
  *
  * Forward declarations
@@ -261,6 +268,7 @@ ws_surface_new(
 
     // initialize the members
     ws_wayland_buffer_init(&self->img_buf, NULL);
+    ws_wayland_buffer_init(&self->commit.commit_buf, NULL);
 
     return self;
 
@@ -302,6 +310,7 @@ surface_destroy_cb(
 
     // deinitialize the main image buffer
     ws_object_deinit(&self->img_buf.wl_obj.obj);
+    ws_object_deinit(&self->commit.commit_buf.wl_obj.obj);
 }
 
 static void
@@ -315,11 +324,13 @@ surface_attach_cb(
     struct ws_surface* self;
     self = (struct ws_surface*) wl_resource_get_user_data(resource);
 
-    //!< @todo: handle x and y parameters
-    ws_wayland_buffer_set_resource(&self->img_buf, buffer);
+    ws_wayland_buffer_set_resource(&self->commit.commit_buf, buffer);
+    self->commit.flags |= SURFACE_BUFFER_ATTACHED;
+    //We clear the damaged area because of the new buffer
+    self->commit.flags &= ~SURFACE_DAMAGED;
 
-    self->x = x;
-    self->y = y;
+    self->commit.x = x;
+    self->commit.y = y;
 }
 
 static void
@@ -331,7 +342,10 @@ surface_damage_cb(
     int32_t width,
     int32_t height
 ) {
-    //!< @todo: implement
+    struct ws_surface* self;
+    self = (struct ws_surface*) wl_resource_get_user_data(resource);
+
+    self->commit.flags |= SURFACE_DAMAGED;
 }
 
 static void
@@ -388,17 +402,36 @@ surface_commit_cb(
         return;
     }
 
-    ws_set_select(&ws_comp_ctx.monitors, NULL, NULL,
-                  sf_commit_blit, &s->img_buf);
-
-    if (s->frame_callback) {
-        wl_callback_send_done(s->frame_callback,
-                                clock() / (CLOCKS_PER_SEC/1000));
-        wl_resource_destroy(s->frame_callback);
-        s->frame_callback = NULL;
+    if (s->commit.flags & SURFACE_DAMAGED) {
+        //!< @todo Update the damaged part using a buffer union
     }
 
-    ws_wayland_buffer_release(&s->img_buf);
+    if (s->commit.flags & SURFACE_BUFFER_ATTACHED) {
+        s->x = s->commit.x;
+        s->y = s->commit.y;
+
+        struct wl_resource* res;
+        res = ws_wayland_obj_get_wl_resource(&s->commit.commit_buf.wl_obj);
+
+
+
+        ws_wayland_buffer_set_resource(&s->img_buf, res);
+
+        ws_set_select(&ws_comp_ctx.monitors, NULL, NULL,
+                sf_commit_blit, &s->img_buf);
+
+        if (s->frame_callback) {
+            wl_callback_send_done(s->frame_callback,
+                    clock() / (CLOCKS_PER_SEC/1000));
+            wl_resource_destroy(s->frame_callback);
+            s->frame_callback = NULL;
+        }
+        ws_wayland_buffer_release(&s->img_buf);
+    }
+
+
+
+    s->commit.flags = 0;
 
 }
 
@@ -416,7 +449,7 @@ sf_commit_blit(
         return 0;
     }
 
-    ws_buffer_blit((struct ws_buffer *) monitor->buffer, buffer);
+    ws_buffer_blit(&monitor->buffer->obj.obj, buffer);
 
     return 0;
 }
@@ -497,5 +530,13 @@ ws_surface_set_role(
 unlock:
     ws_object_unlock(&self->wl_obj.obj);
     return ret;
+}
+
+void
+ws_surface_regenerate_state(
+    struct ws_surface* self //!< the surface
+) {
+    struct ws_wayland_buffer new_buffer;
+    ws_wayland_buffer_init(&new_buffer, NULL);
 }
 
