@@ -235,3 +235,61 @@ ws_buffer_blit(
         );
     }
 }
+
+void
+ws_buffer_blit_at(
+    struct ws_buffer* dest,
+    struct ws_buffer const* src,
+    int const x,
+    int const y
+) {
+    void* buf_dst = ws_buffer_data(dest);
+    void* buf_src = ws_buffer_data(src);
+    if (!(buf_dst && buf_src)) {
+        return;
+    }
+
+    //!< @todo use byte-size instead of stride
+    ws_log(&log_ctx, LOG_DEBUG, "Blitting image with dim: %dx%d at (%d, %d)",
+            ws_buffer_width(src),
+            ws_buffer_height(src),
+            x, y);
+
+    // The maximal width can copy. We substract the y position to account for
+    // displacement /into/ the destination buffer.
+    int max_width =  MIN((ws_buffer_width(dest) - y) * ws_buffer_bpp(dest),
+                         ws_buffer_width(src)  * ws_buffer_bpp(src));
+
+    // How many rows can we copy at max?
+    int max_height = MIN((ws_buffer_height(dest) - x), ws_buffer_height(src));
+
+    int stride_dest = ws_buffer_stride(dest);
+    int stride_src = ws_buffer_stride(src);
+
+    //
+    //  We go into the buffer at the x and y position
+    //     <--------Stride------->
+    //     +---------------------+
+    //     |        ^            |
+    //     |        x            |
+    //     |        v            |
+    //     |<   y  >+---+        |
+    //     |        |###|        |
+    //     |        |###|        |
+    //     |        +---+        |
+    //     +---------------------+
+    //  This is done by adding the corret offset. Since a stride is the full
+    //  length of a row we just multiply the x value with it.
+    //  BPP = Bytes per Pixel. This way we then go to the left in the buffer.
+    //  From then on we just
+    buf_dst = ((char*) buf_dst) + (x * stride_dest) + (y * ws_buffer_bpp(dest));
+
+    // vert = vertical position
+    for (int vert = 0; vert < max_height; ++vert) {
+        // We copy a whole row from one buffer into the other
+        memcpy(((char*) buf_dst) + (vert * stride_dest),
+               ((char*) buf_src) + (vert * stride_src),
+               max_width);
+    }
+
+}

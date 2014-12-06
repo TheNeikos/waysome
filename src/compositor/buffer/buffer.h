@@ -246,5 +246,19 @@ ws_buffer_blit(
 __ws_nonnull__(1,2)
 ;
 
+/**
+ * Blit two buffers together at a position (This copies one into the other)
+ *
+ * @memberof ws_buffer
+ *
+ * @warning do not pass NULL to this function! It will crash!
+ */
+void
+ws_buffer_blit_at(
+    struct ws_buffer* dest, //!< The buffer to copy into
+    struct ws_buffer const* src, //!< The buffer top to
+    int const x, //!< Offset of x into `dest`
+    int const y  //!< Offset of y into `dest`
+);
 #endif // __WS_BUFFER_H__
 
