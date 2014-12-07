@@ -57,6 +57,8 @@
 #include <pthread.h>
 #include <stdlib.h>
 
+#include "compositor/wayland/compositor.h"
+
 #include "util/cleaner.h"
 #include "util/condition.h"
 #include "util/wayland.h"
@@ -354,6 +356,7 @@ wayland_flush(
     ev_prepare* watcher,
     int revents
 ) {
+    ws_wayland_compositor_flush();
     // why can't you flush all the clients by the loop? Like I know...
     struct wl_display* disp = ws_wayland_acquire_display();
     if (unlikely(!disp)) {
