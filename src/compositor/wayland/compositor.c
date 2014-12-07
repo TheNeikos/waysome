@@ -180,6 +180,14 @@ ws_wayland_compositor_add_event(
     ws_wayland_release_display();
 }
 
+void
+ws_compositing_event_new_and_redraw(
+    struct ws_abstract_shell_surface* surface,
+    void* data
+) {
+    //!< @todo
+}
+
 /*
  *
  * Internal implementation

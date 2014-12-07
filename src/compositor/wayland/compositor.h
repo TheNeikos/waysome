@@ -60,5 +60,14 @@ ws_wayland_compositor_add_event(
     struct ws_compositing_event* event
 );
 
+/**
+ * Creates a new redraw event and schudeles it for the next update
+ */
+void
+ws_compositing_event_new_and_redraw(
+    struct ws_abstract_shell_surface* surface,
+    void* data
+);
+
 #endif // __WS_WL_SURFACE_H__
 
