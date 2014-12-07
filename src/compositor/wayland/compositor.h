@@ -28,7 +28,12 @@
 #ifndef __WS_WL_COMPOSITOR_H__
 #define __WS_WL_COMPOSITOR_H__
 
-struct ws_compositing_event; //defined in compositing_event.h
+struct ws_compositing_event {
+    struct ws_abstract_shell_surface* shell; //!< The shell
+    void* data;
+    void(*callback)(struct ws_compositing_event* event, void* data); //!< cb
+    struct wl_list link; //!< The link element for the callback
+};
 
 /**
  * Initialize the wayland side of the compositor

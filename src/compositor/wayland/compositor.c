@@ -30,6 +30,7 @@
 // wayland-server.h has to be included before wayland-server-protocol.h
 #include <wayland-server.h>
 #include <wayland-server-protocol.h>
+#include <wayland-util.h>
 
 #include "compositor/internal_context.h"
 #include "compositor/monitor.h"
@@ -51,6 +52,7 @@
  */
 static struct {
     struct wl_global* comp; //!< the actual wayland compositor
+    struct wl_list shells; //!< A linked list of abstract shell surfaces
 } wl_comp_ctx;
 
 /*
@@ -147,6 +149,7 @@ ws_wayland_compositor_init(void) {
     // we don't need the display anymore
     ws_wayland_release_display();
 
+    wl_list_init(&wl_comp_ctx.shells);
 
     // we're done
     is_init = true;
