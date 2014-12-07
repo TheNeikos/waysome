@@ -157,6 +157,18 @@ cleanup_display:
     return -1;
 }
 
+void
+ws_wayland_compositor_flush(void) {
+    //!< @todo: implement
+}
+
+void
+ws_wayland_compositor_add_event(
+    struct ws_compositing_event* event
+) {
+    //!< @todo: implement
+}
+
 /*
  *
  * Internal implementation

@@ -28,6 +28,8 @@
 #ifndef __WS_WL_COMPOSITOR_H__
 #define __WS_WL_COMPOSITOR_H__
 
+struct ws_compositing_event; //defined in compositing_event.h
+
 /**
  * Initialize the wayland side of the compositor
  *
@@ -36,6 +38,22 @@
  */
 int
 ws_wayland_compositor_init(void);
+
+/**
+ *  This empties the event queue of compositing events, applying all
+ *  transformations and flipping the buffers.
+ */
+void
+ws_wayland_compositor_flush(void);
+
+/**
+ * This adds an event to the list of transformations to be done until the next
+ * flush.
+ */
+void
+ws_wayland_compositor_add_event(
+    struct ws_compositing_event* event
+);
 
 #endif // __WS_WL_SURFACE_H__
 
