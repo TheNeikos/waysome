@@ -28,6 +28,8 @@
 #ifndef __WS_WL_COMPOSITOR_H__
 #define __WS_WL_COMPOSITOR_H__
 
+#include <wayland-util.h>
+
 struct ws_compositing_event {
     struct ws_abstract_shell_surface* shell; //!< The shell
     void* data;
