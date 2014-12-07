@@ -25,6 +25,7 @@
  * along with waysome. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <malloc.h>
 #include <stdbool.h>
 
 // wayland-server.h has to be included before wayland-server-protocol.h
@@ -34,6 +35,7 @@
 
 #include "compositor/internal_context.h"
 #include "compositor/monitor.h"
+#include "compositor/wayland/abstract_shell_surface.h"
 #include "compositor/wayland/client.h"
 #include "compositor/wayland/compositor.h"
 #include "compositor/wayland/region.h"
@@ -185,7 +187,16 @@ ws_compositing_event_new_and_redraw(
     struct ws_abstract_shell_surface* surface,
     void* data
 ) {
-    //!< @todo
+    struct ws_compositing_event* event = calloc(1, sizeof(*event));
+    if (!event) {
+        return;
+    }
+
+    event->shell = surface;
+    event->data = data;
+    event->callback = ws_abstract_shell_surface_redraw;
+
+    ws_wayland_compositor_add_event(event);
 }
 
 /*
