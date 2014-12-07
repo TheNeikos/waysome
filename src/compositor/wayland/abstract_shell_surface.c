@@ -151,6 +151,8 @@ ws_abstract_shell_surface_init(
         return -1;
     }
 
+    self->surface->parent = self;
+
     retval = ws_surface_set_role(self->surface, role);
     if (retval < 0) {
         ws_object_unref((struct ws_object*) self->surface);

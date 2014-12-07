@@ -49,6 +49,7 @@ struct ws_surface {
     struct ws_region* input_region; //!< @protected input region
     struct wl_resource* frame_callback; //!< @protected frame callback
     struct wl_interface const* role; //!< @protected role of this surface
+    struct ws_abstract_shell_surface* parent; //!< @protected the parent
     int32_t x; //!< @public x position of this surface
     int32_t y; //!< @public y position of this surface
     int32_t width; //!< @public width of the surface
