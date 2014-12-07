@@ -211,29 +211,7 @@ ws_buffer_blit(
     struct ws_buffer* dest,
     struct ws_buffer const* src
 ) {
-    void* buf_dst = ws_buffer_data(dest);
-    void* buf_src = ws_buffer_data(src);
-    if (!(buf_dst && buf_src)) {
-        return;
-    }
-
-    //!< @todo use byte-size instead of stride
-    ws_log(&log_ctx, LOG_DEBUG, "Blitting image with dim: %dx%d with bpp:%d",
-            ws_buffer_width(src),
-            ws_buffer_height(src),
-            ws_buffer_bpp(src));
-    int min_x = MIN(ws_buffer_width(dest) * ws_buffer_bpp(dest),
-            ws_buffer_width(src) * ws_buffer_bpp(src));
-    int min_y = MIN(ws_buffer_height(dest), ws_buffer_height(src));
-
-    int stride_dst = ws_buffer_stride(dest);
-    int stride_src = ws_buffer_stride(src);
-    for (int y = 0; y < min_y; ++y) {
-        memcpy(((char*) buf_dst) + (y * stride_dst),
-                ((char*) buf_src) + (y * stride_src),
-                min_x
-        );
-    }
+    ws_buffer_blit_at(dest, src, 0, 0);
 }
 
 void
