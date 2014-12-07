@@ -42,6 +42,7 @@ struct ws_compositing_event; //defintion in compositor.h
 struct ws_abstract_shell_surface {
     struct ws_wayland_obj wl_obj; //!< @protected: The associated wayland object
     struct ws_surface* surface; //!< @public: The associated surface
+    struct ws_monitor* monitor; //!< @private: The monitor the shell is on
     bool visible; //!< Flag for if the shell is visible
     int height; //!< The height of the window
     int width; //!< The width of the window
@@ -66,7 +67,8 @@ ws_abstract_shell_surface_init(
     struct ws_abstract_shell_surface* self, //!< surface to initialize
     struct wl_resource* resource, //!< resource to set
     struct ws_surface* surface, //!< surface to attach
-    struct wl_interface const* role //!< role to give the surface
+    struct wl_interface const* role, //!< role to give the surface
+    struct ws_monitor* monitor //!< The monitor the surface is on
 );
 
 /**

@@ -29,9 +29,10 @@
 #include <wayland-server.h>
 #include <wayland-server-protocol.h>
 
-#include "protocol/xdg-shell-header.h"
-#include "compositor/wayland/xdg_surface.h"
+#include "compositor/cursor.h"
 #include "compositor/wayland/client.h"
+#include "compositor/wayland/xdg_surface.h"
+#include "protocol/xdg-shell-header.h"
 
 /*
  *
@@ -357,9 +358,11 @@ ws_wayland_xdg_surface_new(
         return NULL;
     }
 
+    struct ws_monitor* monitor = ws_cursor_get()->cur_mon;
+
     int retval;
     retval = ws_abstract_shell_surface_init(&self->shell, resource, surface,
-                                            &xdg_surface_interface);
+                                            &xdg_surface_interface, monitor);
     if (retval < 0) {
         goto cleanup;
         return NULL;

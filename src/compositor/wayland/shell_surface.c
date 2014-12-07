@@ -29,6 +29,7 @@
 #include <malloc.h>
 #include <wayland-server.h>
 
+#include "compositor/cursor.h"
 #include "compositor/wayland/client.h"
 #include "compositor/wayland/surface.h"
 #include "compositor/wayland/shell_surface.h"
@@ -266,10 +267,14 @@ ws_shell_surface_new(
     wl_resource_set_implementation(resource, &interface, user_data,
                                    resource_destroy);
 
+
+    struct ws_monitor* monitor = ws_cursor_get()->cur_mon;
+
     // finish the initialization
     int retval = ws_abstract_shell_surface_init(&self->shell, resource,
                                                 surface,
-                                                &wl_shell_surface_interface);
+                                                &wl_shell_surface_interface,
+                                                monitor);
     if (retval < 0) {
         goto cleanup_resource;
     }

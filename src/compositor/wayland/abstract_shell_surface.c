@@ -30,6 +30,7 @@
 #include <wayland-server-protocol.h>
 
 #include "compositor/wayland/abstract_shell_surface.h"
+#include "compositor/monitor.h"
 #include "compositor/wayland/compositor.h"
 #include "compositor/wayland/surface.h"
 #include "values/union.h"
@@ -137,7 +138,8 @@ ws_abstract_shell_surface_init(
     struct ws_abstract_shell_surface* self,
     struct wl_resource* resource,
     struct ws_surface* surface,
-    struct wl_interface const* role
+    struct wl_interface const* role,
+    struct ws_monitor* monitor
 ) {
     // initialize the embedded wayland object
     int retval = ws_wayland_obj_init(&self->wl_obj, resource);
@@ -161,6 +163,7 @@ ws_abstract_shell_surface_init(
     }
 
     self->visible = false;
+    self->monitor = monitor;
 
     // we're done
     return 0;
@@ -249,7 +252,15 @@ ws_abstract_shell_surface_redraw(
     struct ws_compositing_event* event, //!< The event that caused this redraw
     void* dummy //!< Additional data given to this function (unused here)
 ) {
-    //!< @todo implement
+    struct ws_abstract_shell_surface* self = event->shell;
+    struct ws_frame_buffer* mon_buff;
+    mon_buff = ws_monitor_get_active_buffer(self->monitor);
+
+    struct ws_buffer* src_buff;
+    src_buff = ws_wayland_buffer_get_buffer(&self->surface->img_buf);
+
+    ws_buffer_blit_at((struct ws_buffer*) mon_buff, src_buff, self->x, self->y);
+
 }
 
 /*
