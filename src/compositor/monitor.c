@@ -377,7 +377,13 @@ ws_monitor_set_fb(
     struct ws_monitor* self, //!< The monitor to apply the buffer to
     struct ws_frame_buffer* buffer //!< The framebuffer to set as active
 ) {
-    //!< @todo implement
+    int ret = drmModeSetCrtc(ws_comp_ctx.fb->fd, self->crtc,
+                             buffer->fb,
+                             0, 0, &self->conn, 1, &self->current_mode->mode);
+    if (ret) {
+        ws_log(&log_ctx, LOG_ERR, "could not set the crtc for self %d.",
+                self->crtc);
+    }
 }
 
 void
