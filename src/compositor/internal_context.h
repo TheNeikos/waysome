@@ -40,7 +40,6 @@
 extern struct ws_compositor_context {
     struct ws_framebuffer_device* fb; //<! The Framebuffer device
     struct ws_set monitors; //<! A set of monitors (connected or not)
-    struct ws_monitor* conns; //<! A linked list of ws_monitors
     struct ws_cursor* cursor; //<! The cursor
     struct ws_keyboard* keyboard; //!< The keyboard
 } ws_comp_ctx;
