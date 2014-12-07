@@ -61,7 +61,9 @@ struct ws_monitor {
     bool connected; //!< @public is the monitor connected?
     int id; //!< @public the id of the monitor relative to the fb_dev
 
-    struct ws_frame_buffer* buffer; //!< @public The frame buffer
+    struct ws_frame_buffer* buffer[2]; //!< @private The frame buffers for
+                                       // double buffering
+    int active_buff; //!< @private the current public framebuffer
 
     struct ws_framebuffer_device* fb_dev; //!< @public Framebuffer Device
     struct ws_monitor_mode* current_mode;
