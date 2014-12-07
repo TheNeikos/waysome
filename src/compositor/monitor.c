@@ -365,3 +365,18 @@ monitor_cmp(
     return 0;
 }
 
+void
+ws_monitor_set_fb(
+    struct ws_monitor* self, //!< The monitor to apply the buffer to
+    struct ws_frame_buffer* buffer //!< The framebuffer to set as active
+) {
+    //!< @todo implement
+}
+
+void
+ws_monitor_flip_buffers(
+    struct ws_monitor* self //!< The monitor where you flip the buffers
+) {
+    //!< @todo implement
+}
+

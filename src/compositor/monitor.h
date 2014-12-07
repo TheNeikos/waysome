@@ -173,6 +173,22 @@ ws_monitor_publish(
     struct ws_monitor* self
 );
 
+/**
+ * Sets the given framebuffer as the active one
+ */
+void
+ws_monitor_set_fb(
+    struct ws_monitor* self, //!< The monitor to apply the buffer to
+    struct ws_frame_buffer* buffer //!< The framebuffer to set as active
+);
+
+/**
+ * Flips the current framebuffer with a secondary one
+ */
+void
+ws_monitor_flip_buffers(
+    struct ws_monitor* self //!< The monitor where you flip the buffers
+);
 #endif // __WS_OBJECTS_MONITOR_H__
 
 /**
