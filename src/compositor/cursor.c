@@ -202,8 +202,11 @@ ws_cursor_set_position(
     int x,
     int y
 ) {
-    int w = ws_buffer_width((struct ws_buffer*) self->cur_mon->buffer);
-    int h = ws_buffer_height((struct ws_buffer*) self->cur_mon->buffer);
+
+    struct ws_buffer* mon_buffer;
+    mon_buffer = (struct ws_buffer*) ws_monitor_get_active_buffer(self->cur_mon);
+    int w = ws_buffer_width(mon_buffer);
+    int h = ws_buffer_height(mon_buffer);
 
     // We use the negative hotspot position because we don't want it to go
     // off screen.

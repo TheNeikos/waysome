@@ -411,12 +411,14 @@ sf_commit_blit(
     struct ws_buffer* buffer;
     buffer = ws_wayland_buffer_get_buffer((struct ws_wayland_buffer*) buf);
 
-    if (!monitor->buffer ||
-            !ws_buffer_data((struct ws_buffer*) monitor->buffer)) {
+    struct ws_frame_buffer* mon_buffer = ws_monitor_get_active_buffer(monitor);
+
+    if (!mon_buffer ||
+            !ws_buffer_data((struct ws_buffer*) mon_buffer)) {
         return 0;
     }
 
-    ws_buffer_blit((struct ws_buffer *) monitor->buffer, buffer);
+    ws_buffer_blit((struct ws_buffer *) mon_buffer, buffer);
 
     return 0;
 }

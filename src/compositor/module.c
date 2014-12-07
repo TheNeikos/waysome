@@ -264,6 +264,7 @@ blit_duck_on_monitor(
     void const* mon
 ) {
     struct ws_monitor* monitor = (struct ws_monitor*) mon;
+    struct ws_frame_buffer* mon_buffer = ws_monitor_get_active_buffer(monitor);
     struct ws_image_buffer* duck = (struct ws_image_buffer*) img;
 
     if (!monitor->connected) {
@@ -277,7 +278,7 @@ blit_duck_on_monitor(
     }
     ws_log(&log_ctx, LOG_DEBUG, "Copying into monitor with name: %s",
             monitor->current_mode->mode.name);
-    ws_buffer_blit((struct ws_buffer*) monitor->buffer,
+    ws_buffer_blit(&mon_buffer->obj.obj,
             (struct ws_buffer*) duck);
     return 0;
 }
