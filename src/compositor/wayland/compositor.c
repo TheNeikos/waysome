@@ -162,7 +162,13 @@ cleanup_display:
 
 void
 ws_wayland_compositor_flush(void) {
-    //!< @todo: implement
+    //!< @todo Add wl_display_locking
+    struct ws_compositing_event* event;
+    wl_list_for_each(event, &wl_comp_ctx.shells, link) {
+        event->callback(event, event->data);
+        wl_list_remove(&event->link);
+        free(event);
+    }
 }
 
 void
