@@ -260,5 +260,14 @@ ws_buffer_blit_at(
     int const x, //!< Offset of x into `dest`
     int const y  //!< Offset of y into `dest`
 );
+
+/**
+ * Clears a buffer by writing over it with 0s
+ */
+void
+ws_buffer_clear(
+    struct ws_buffer* buff //!< The buffer to clear
+);
+
 #endif // __WS_BUFFER_H__
 

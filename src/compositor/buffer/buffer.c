@@ -271,3 +271,18 @@ ws_buffer_blit_at(
     }
 
 }
+
+void
+ws_buffer_clear(
+    struct ws_buffer* buff //!< The buffer to clear
+) {
+    void* buf_data = ws_buffer_data(buff);
+
+    if (!buf_data) {
+        return;
+    }
+
+    int size = ws_buffer_stride(buff) * ws_buffer_height(buff);
+    memset(buf_data, 0, size);
+}
+
