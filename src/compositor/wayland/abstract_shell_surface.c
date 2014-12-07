@@ -30,6 +30,7 @@
 #include <wayland-server-protocol.h>
 
 #include "compositor/wayland/abstract_shell_surface.h"
+#include "compositor/wayland/compositor.h"
 #include "compositor/wayland/surface.h"
 #include "values/union.h"
 
@@ -241,6 +242,14 @@ ws_abstract_shell_surface_set_width_and_height(
 
     wl_shell_surface_send_configure(r, edges, width, height);
     return 0;
+}
+
+void
+ws_abstract_shell_surface_redraw(
+    struct ws_compositing_event* event, //!< The event that caused this redraw
+    void* dummy //!< Additional data given to this function (unused here)
+) {
+    //!< @todo implement
 }
 
 /*

@@ -33,6 +33,7 @@
 // forward declarations
 struct ws_surface; // definition in compositor/surface.h
 struct wl_interface; // definition in wayland headers
+struct ws_compositing_event; //defintion in compositor.h
 
 
 /**
@@ -124,4 +125,12 @@ ws_abstract_shell_surface_set_width_and_height(
     int32_t height //!< The new height
 );
 
+/**
+ * Redraws the shell on it's given monitor
+ */
+void
+ws_abstract_shell_surface_redraw(
+    struct ws_compositing_event* event, //!< The event that caused this redraw
+    void* dummy //!< Additional data given to this function (unused here)
+);
 #endif // __WAYSOME_ABSTRACT_SHELL_SURFACE_H__
