@@ -35,6 +35,7 @@
 #include "compositor/internal_context.h"
 #include "compositor/monitor.h"
 #include "compositor/wayland/client.h"
+#include "compositor/wayland/compositor.h"
 #include "compositor/wayland/region.h"
 #include "compositor/wayland/surface.h"
 #include "objects/set.h"
@@ -143,17 +144,6 @@ static void
 surface_commit_cb(
     struct wl_client* client, //!< client requesting the action
     struct wl_resource* resource //!< the resource affected by the action
-);
-
-/**
- * Helper for iterating over monitors and committing them
- *
- * @return always zero
- */
-static int
-sf_commit_blit(
-    void* buf, //!< The buffer to blit
-    void const* mon //!< The monitor of the current iteration
 );
 
 /**
@@ -415,8 +405,10 @@ surface_commit_cb(
 
         ws_wayland_buffer_set_resource(&s->img_buf, res);
 
-        ws_set_select(&ws_comp_ctx.monitors, NULL, NULL,
-                sf_commit_blit, &s->img_buf);
+        // We have an abstract surface as parent! Let's tell them to redraw!
+        if (s->parent) {
+            ws_compositing_event_new_and_redraw(s->parent, NULL);
+        }
 
         if (s->frame_callback) {
             wl_callback_send_done(s->frame_callback,
@@ -431,27 +423,6 @@ surface_commit_cb(
 
     s->commit.flags = 0;
 
-}
-
-static int
-sf_commit_blit(
-    void* buf,
-    void const* mon
-) {
-    struct ws_monitor* monitor = (void*) mon;
-    struct ws_buffer* buffer;
-    buffer = ws_wayland_buffer_get_buffer((struct ws_wayland_buffer*) buf);
-
-    struct ws_frame_buffer* mon_buffer = ws_monitor_get_active_buffer(monitor);
-
-    if (!mon_buffer ||
-            !ws_buffer_data((struct ws_buffer*) mon_buffer)) {
-        return 0;
-    }
-
-    ws_buffer_blit((struct ws_buffer *) mon_buffer, buffer);
-
-    return 0;
 }
 
 static void
