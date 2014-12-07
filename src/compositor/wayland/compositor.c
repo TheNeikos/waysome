@@ -169,7 +169,9 @@ void
 ws_wayland_compositor_add_event(
     struct ws_compositing_event* event
 ) {
-    //!< @todo: implement
+    ws_wayland_acquire_display();
+    wl_list_insert(&wl_comp_ctx.shells, &event->link);
+    ws_wayland_release_display();
 }
 
 /*
