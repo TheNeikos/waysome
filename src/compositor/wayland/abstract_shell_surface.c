@@ -263,6 +263,13 @@ ws_abstract_shell_surface_redraw(
 
 }
 
+void
+ws_abstract_shell_surface_composite(
+    struct ws_monitor* monitor //!< The monitor to composite for
+) {
+    //!< @todo implement
+}
+
 /*
  *
  * Internal implementation

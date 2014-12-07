@@ -135,4 +135,13 @@ ws_abstract_shell_surface_redraw(
     struct ws_compositing_event* event, //!< The event that caused this redraw
     void* dummy //!< Additional data given to this function (unused here)
 );
+
+/**
+ * Does the actual composition, copying all the buffers into the given position
+ */
+void
+ws_abstract_shell_surface_composite(
+    struct ws_monitor* monitor //!< The monitor to composite for
+);
+
 #endif // __WAYSOME_ABSTRACT_SHELL_SURFACE_H__
