@@ -387,3 +387,10 @@ ws_monitor_flip_buffers(
     //!< @todo implement
 }
 
+struct ws_frame_buffer*
+ws_monitor_get_active_buffer(
+    struct ws_monitor* self //!< The monitor for which you want the buffer
+) {
+    return self->buffer[self->active_buff ^ 1];
+}
+

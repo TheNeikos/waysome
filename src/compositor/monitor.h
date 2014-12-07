@@ -191,6 +191,15 @@ void
 ws_monitor_flip_buffers(
     struct ws_monitor* self //!< The monitor where you flip the buffers
 );
+
+/**
+ * Gets the current active frame buffer
+ */
+struct ws_frame_buffer*
+ws_monitor_get_active_buffer(
+    struct ws_monitor* self //!< The monitor for which you want the buffer
+);
+
 #endif // __WS_OBJECTS_MONITOR_H__
 
 /**
