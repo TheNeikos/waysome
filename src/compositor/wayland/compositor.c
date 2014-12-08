@@ -54,7 +54,7 @@
  */
 static struct {
     struct wl_global* comp; //!< the actual wayland compositor
-    struct wl_list shells; //!< A linked list of abstract shell surfaces
+    struct wl_list events; //!< A linked list of events
 } wl_comp_ctx;
 
 /*
@@ -160,7 +160,7 @@ ws_wayland_compositor_init(void) {
     // we don't need the display anymore
     ws_wayland_release_display();
 
-    wl_list_init(&wl_comp_ctx.shells);
+    wl_list_init(&wl_comp_ctx.events);
 
     // we're done
     is_init = true;
@@ -176,12 +176,12 @@ ws_wayland_compositor_flush(void) {
 
     ws_wayland_acquire_display();
 
-    int empty = wl_list_empty(&wl_comp_ctx.shells);
+    int empty = wl_list_empty(&wl_comp_ctx.events);
 
     if (!empty)  {
         struct ws_compositing_event* event;
         struct ws_compositing_event* tmp;
-        wl_list_for_each_safe(event, tmp, &wl_comp_ctx.shells, link) {
+        wl_list_for_each_safe(event, tmp, &wl_comp_ctx.events, link) {
             event->callback(event, event->data);
             wl_list_remove(&event->link);
             free(event);
@@ -197,7 +197,7 @@ ws_wayland_compositor_add_event(
     struct ws_compositing_event* event
 ) {
     ws_wayland_acquire_display();
-    wl_list_insert(&wl_comp_ctx.shells, &event->link);
+    wl_list_insert(&wl_comp_ctx.events, &event->link);
     ws_wayland_release_display();
 }
 
