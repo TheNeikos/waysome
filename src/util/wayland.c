@@ -346,6 +346,7 @@ wayland_dispatch(
 
     // dispatch events and return immediately, even if no events are pending
     wl_event_loop_dispatch(wl_loop, 0);
+    ws_wayland_compositor_flush();
 
     ws_wayland_release_display();
 }
@@ -356,7 +357,6 @@ wayland_flush(
     ev_prepare* watcher,
     int revents
 ) {
-    ws_wayland_compositor_flush();
     // why can't you flush all the clients by the loop? Like I know...
     struct wl_display* disp = ws_wayland_acquire_display();
     if (unlikely(!disp)) {

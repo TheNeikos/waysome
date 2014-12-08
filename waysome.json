@@ -15,6 +15,19 @@
         "EXEC": true
     },
     "CMDS": [
-        {"call": [{"pos":0}, "add_hotkey_event", "shutdown", 29, 56, 16]}
+        {"call": [{"pos":0}, "add_hotkey_event", "shutdown", 29, 56, 16]},
+        {"call": [{"pos":0}, "add_hotkey_event", "move_left", 56, 28]},
+        {"call": [{"pos":0}, "exec", "weston-terminal"]}
+    ]
+}
+{
+    "TYPE": "transaction",
+    "UID": 3,
+    "FLAGS": {
+        "REGISTER": "move_left"
+    },
+    "CMDS": [
+        {"call": [{"pos":0}, "get_keyboard_focus"]},
+        {"call": [{"pos":-1}, "setypos", 300]}
     ]
 }

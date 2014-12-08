@@ -108,17 +108,34 @@ cmd_func_set_visibility(
     union ws_value_union* stack // The stack to use
 );
 
+/**
+ * Callback command function for setting surface y position
+ *
+ * @memberof ws_abstract_shell_surface
+ *
+ * Takes two parameters:
+ *  1) The object id of the surface
+ *  2) The new y position of the surface
+ */
+static int
+cmd_func_set_y_pos(
+    union ws_value_union* stack // The stack to use
+);
+
 /*
  *
  * Interface implementation
  *
  */
 
+static struct ws_logger_context log_ctx = { .prefix = "[Compositor/Abstract] " };
+
 static const struct ws_object_function FUNCTIONS[] = {
     { .name = "setwidth",           .func = cmd_func_set_width },
     { .name = "setheight",          .func = cmd_func_set_height },
     { .name = "setwidthheight",     .func = cmd_func_set_width_and_height },
     { .name = "setvisibility",      .func = cmd_func_set_visibility },
+    { .name = "setypos",            .func = cmd_func_set_y_pos },
     { .name = NULL,                 .func = NULL } // Iteration stopper
 };
 
@@ -172,7 +189,7 @@ ws_abstract_shell_surface_init(
         return -1;
     }
 
-    ws_image_buffer_resize(self->cache_buffer, 400, 400); //!< @todo: Decide on
+    ws_image_buffer_resize(self->cache_buffer, 800, 800); //!< @todo: Decide on
                                                         // default size
 
     // we're done
@@ -275,8 +292,39 @@ ws_abstract_shell_surface_redraw(
 
 void
 ws_abstract_shell_surface_composite(
+    struct ws_abstract_shell_surface* surface, //!< The surface to draw
     struct ws_monitor* monitor //!< The monitor to composite for
 ) {
+    if (!surface->updated) {
+        return;
+    }
+
+    ws_log(&log_ctx, LOG_DEBUG, "Compositing at %dx%d",
+            surface->x, surface->y);
+
+    struct ws_frame_buffer* mon_buff = ws_monitor_get_active_buffer(monitor);
+
+    ws_buffer_blit_at((struct ws_buffer*) mon_buff,
+                      (struct ws_buffer*) surface->cache_buffer,
+                      surface->x, surface->y);
+
+    monitor->updated = true;
+    surface->updated = false;
+}
+
+void
+ws_abstract_shell_surface_update(
+    struct ws_abstract_shell_surface* self //!< surface to update
+) {
+    struct ws_surface* surface = self->surface;
+
+    struct ws_buffer* buffer;
+    buffer = ws_wayland_buffer_get_buffer((struct ws_wayland_buffer*) &surface->img_buf);
+
+    ws_buffer_blit_at((struct ws_buffer*) self->cache_buffer,
+                      buffer, surface->x, surface->y);
+    ws_abstract_shell_surface_composite(self, self->monitor);
+    self->updated = true;
 }
 
 /*
@@ -432,5 +480,29 @@ cmd_func_set_visibility(
 
     self->visible = ws_value_bool_get(&stack[2].bool_);
 
+    return 0;
+}
+
+static int
+cmd_func_set_y_pos(
+    union ws_value_union* stack // The stack to use
+) {
+    if (ws_value_get_type(&stack[0].value) != WS_VALUE_TYPE_OBJECT_ID) {
+        return -EINVAL;
+    }
+
+    // `1` is the command string itself
+
+    if (ws_value_get_type(&stack[2].value) != WS_VALUE_TYPE_INT) {
+        return -EINVAL;
+    }
+
+    struct ws_abstract_shell_surface* self;
+    self = (struct ws_abstract_shell_surface*)
+            ws_value_object_id_get(&stack[0].object_id);
+
+    self->visible = ws_value_int_get(&stack[2].int_);
+
+    ws_abstract_shell_surface_update(self);
     return 0;
 }

@@ -113,6 +113,14 @@ flip_monitor(
     void const* monitor_
 );
 
+/**
+ * Compositing method used for ws_set_select to do the actual processing
+ */
+static int
+composite_monitor(
+    void* dummy,
+    void const* shell_
+);
 /*
  *
  * Internal constants
@@ -174,22 +182,22 @@ cleanup_display:
 void
 ws_wayland_compositor_flush(void) {
 
-    ws_wayland_acquire_display();
+    // ws_wayland_acquire_display();
 
-    int empty = wl_list_empty(&wl_comp_ctx.events);
+    // int empty = wl_list_empty(&wl_comp_ctx.events);
 
-    if (!empty)  {
-        struct ws_compositing_event* event;
-        struct ws_compositing_event* tmp;
-        wl_list_for_each_safe(event, tmp, &wl_comp_ctx.events, link) {
-            event->callback(event, event->data);
-            wl_list_remove(&event->link);
-            free(event);
-        }
+    // if (!empty)  {
+    //     struct ws_compositing_event* event;
+    //     struct ws_compositing_event* tmp;
+    //     wl_list_for_each_safe(event, tmp, &wl_comp_ctx.events, link) {
+    //         event->callback(event, event->data);
+    //         wl_list_remove(&event->link);
+    //         free(event);
+    //     }
 
-        ws_set_select(&ws_comp_ctx.monitors, NULL, NULL, flip_monitor, NULL);
-    }
-    ws_wayland_release_display();
+    ws_set_select(&ws_comp_ctx.monitors, NULL, NULL, flip_monitor, NULL);
+    // }
+    // ws_wayland_release_display();
 }
 
 void
@@ -309,8 +317,6 @@ flip_monitor(
     void const* monitor_
 ) {
     struct ws_monitor* monitor = (struct ws_monitor*) monitor_;
-
-    ws_abstract_shell_surface_composite(monitor);
 
     ws_monitor_flip_buffers(monitor);
     return 0;

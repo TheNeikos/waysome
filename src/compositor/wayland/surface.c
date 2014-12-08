@@ -34,6 +34,7 @@
 
 #include "compositor/internal_context.h"
 #include "compositor/monitor.h"
+#include "compositor/wayland/abstract_shell_surface.h"
 #include "compositor/wayland/client.h"
 #include "compositor/wayland/compositor.h"
 #include "compositor/wayland/region.h"
@@ -407,7 +408,7 @@ surface_commit_cb(
 
         // We have an abstract surface as parent! Let's tell them to redraw!
         if (s->parent) {
-            ws_compositing_event_new_and_redraw(s->parent, NULL);
+            ws_abstract_shell_surface_update(s->parent);
         }
 
         if (s->frame_callback) {

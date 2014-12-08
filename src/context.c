@@ -369,7 +369,7 @@ static int
 func_get_kb_focus(
     union ws_value_union* stack
 ) {
-    struct ws_surface* surface = ws_keyboard_get()->active_surface;
+    struct ws_abstract_shell_surface* surface = ws_keyboard_get()->active_surface->parent;
 
     ws_value_object_id_set(&stack[0].object_id, (struct ws_object*) surface);
 

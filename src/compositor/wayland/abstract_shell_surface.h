@@ -44,6 +44,7 @@ struct ws_abstract_shell_surface {
     struct ws_surface* surface; //!< @public: The associated surface
     struct ws_monitor* monitor; //!< @private: The monitor the shell is on
     struct ws_image_buffer* cache_buffer; //!< @private: The temp buffer
+    bool updated; //!< Flag for if the shell was updated
     bool visible; //!< Flag for if the shell is visible
     int height; //!< The height of the window
     int width; //!< The width of the window
@@ -142,7 +143,16 @@ ws_abstract_shell_surface_redraw(
  */
 void
 ws_abstract_shell_surface_composite(
+    struct ws_abstract_shell_surface* surface, //!< surface to draw
     struct ws_monitor* monitor //!< The monitor to composite for
+);
+
+/**
+ * Does the actual composition, copying all the buffers into the given position
+ */
+void
+ws_abstract_shell_surface_update(
+    struct ws_abstract_shell_surface* self //!< surface to update
 );
 
 #endif // __WAYSOME_ABSTRACT_SHELL_SURFACE_H__

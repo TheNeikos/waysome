@@ -144,7 +144,17 @@ ws_image_buffer_resize(
     int32_t width, //!< The wanted width
     int32_t height //!< The wanted height
 ) {
-    //!< @todo implement
+    if (buffer->buffer) {
+        if (buffer->raw.width * buffer->raw.height > width * height) {
+            return 0;
+        }
+        free(buffer->buffer);
+    }
+    buffer->buffer = calloc(1, ws_buffer_bpp(&buffer->raw.obj) * width * height);
+    buffer->raw.width = width;
+    buffer->raw.height = height;
+    buffer->raw.stride = width * ws_buffer_bpp(&buffer->raw.obj);
+    //!< @todo calculate the size difference
     return 0;
 }
 

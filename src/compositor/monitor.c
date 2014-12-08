@@ -390,17 +390,22 @@ void
 ws_monitor_flip_buffers(
     struct ws_monitor* self //!< The monitor where you flip the buffers
 ) {
+    // If we have done nothing this loop we don't flip...
+    if (!self->updated) {
+        return;
+    }
     self->active_buff ^= 1;
     if (!self->buffer[0] && !self->buffer[1]) {
         return;
     }
     ws_monitor_set_fb(self, self->buffer[self->active_buff ^ 1]);
+    self->updated = false;
 }
 
 struct ws_frame_buffer*
 ws_monitor_get_active_buffer(
     struct ws_monitor* self //!< The monitor for which you want the buffer
 ) {
-    return self->buffer[self->active_buff ^ 1];
+    return self->buffer[self->active_buff];
 }
 
