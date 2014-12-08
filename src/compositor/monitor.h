@@ -65,6 +65,8 @@ struct ws_monitor {
                                        // double buffering
     int active_buff; //!< @private the current public framebuffer
 
+    bool needs_compositing;
+
     struct ws_framebuffer_device* fb_dev; //!< @public Framebuffer Device
     struct ws_monitor_mode* current_mode;
     uint32_t handle; //!< @public Handle of the frame buffer
