@@ -190,7 +190,7 @@ ws_abstract_shell_surface_set_width(
         return -EINVAL;
     }
 
-    s->width = width;
+    self->width = width;
 
     struct wl_resource* r = ws_wayland_obj_get_wl_resource(&s->wl_obj);
     if (!r) {
@@ -212,7 +212,7 @@ ws_abstract_shell_surface_set_height(
         return -EINVAL;
     }
 
-    s->height = height;
+    self->height = height;
 
     struct wl_resource* r = ws_wayland_obj_get_wl_resource(&s->wl_obj);
     if (!r) {
@@ -235,8 +235,8 @@ ws_abstract_shell_surface_set_width_and_height(
         return -EINVAL;
     }
 
-    s->width = width;
-    s->height = height;
+    self->width = width;
+    self->height = height;
 
     struct wl_resource* r = ws_wayland_obj_get_wl_resource(&s->wl_obj);
     if (!r) {
