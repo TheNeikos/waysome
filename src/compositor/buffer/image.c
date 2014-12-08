@@ -138,6 +138,16 @@ ws_image_buffer_new(void)
     return tmp;
 }
 
+uintmax_t
+ws_image_buffer_resize(
+    struct ws_image_buffer* buffer, //!< The buffer to operate on
+    int32_t width, //!< The wanted width
+    int32_t height //!< The wanted height
+) {
+    //!< @todo implement
+    return 0;
+}
+
 /*
  *
  * Implementations

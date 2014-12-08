@@ -39,6 +39,8 @@
 struct ws_image_buffer {
     struct ws_raw_buffer raw;   //!< @protected Base class.
     void* buffer;               //!< @private The buffer
+    int32_t effective_width;    //!< @private the effective width
+    int32_t effective_height;   //!< @private the effective heigh
 };
 
 /**
@@ -70,4 +72,19 @@ ws_image_buffer_from_png(
     const char* filename
 );
 
+/**
+ * Try to resize an image buffer to fit width x height pixels.
+ *
+ * This will return immediately if the buffer is already big enough
+ *
+ * @memberof ws_image_buffer
+ *
+ * @return the new size
+ */
+uintmax_t
+ws_image_buffer_resize(
+    struct ws_image_buffer* buffer, //!< The buffer to operate on
+    int32_t width, //!< The wanted width
+    int32_t height //!< The wanted height
+);
 #endif // __WS_BACKGROUND_SERVICE_H__
