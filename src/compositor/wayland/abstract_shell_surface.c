@@ -29,8 +29,9 @@
 #include <wayland-server.h>
 #include <wayland-server-protocol.h>
 
-#include "compositor/wayland/abstract_shell_surface.h"
+#include "compositor/buffer/image.h"
 #include "compositor/monitor.h"
+#include "compositor/wayland/abstract_shell_surface.h"
 #include "compositor/wayland/compositor.h"
 #include "compositor/wayland/surface.h"
 #include "values/union.h"
@@ -165,6 +166,15 @@ ws_abstract_shell_surface_init(
     self->visible = false;
     self->monitor = monitor;
 
+    self->cache_buffer = ws_image_buffer_new();
+
+    if (!self->cache_buffer) {
+        return -1;
+    }
+
+    ws_image_buffer_resize(self->cache_buffer, 400, 400); //!< @todo: Decide on
+                                                        // default size
+
     // we're done
     return 0;
 }
@@ -253,14 +263,13 @@ ws_abstract_shell_surface_redraw(
     void* dummy //!< Additional data given to this function (unused here)
 ) {
     struct ws_abstract_shell_surface* self = event->shell;
-    struct ws_frame_buffer* mon_buff;
-    mon_buff = ws_monitor_get_active_buffer(self->monitor);
+
+    struct ws_buffer* my_buff = (struct ws_buffer*) self->cache_buffer;
 
     struct ws_buffer* src_buff;
     src_buff = ws_wayland_buffer_get_buffer(&self->surface->img_buf);
 
-    ws_buffer_blit_at((struct ws_buffer*) mon_buff, src_buff, self->x, self->y);
-
+    ws_buffer_blit_at((struct ws_buffer*) my_buff, src_buff, self->x, self->y);
 }
 
 void
@@ -282,6 +291,10 @@ shell_surface_deinit(
 ) {
     struct ws_abstract_shell_surface* shell_surf;
     shell_surf = (struct ws_abstract_shell_surface*) obj;
+
+    if (shell_surf->cache_buffer) {
+        ws_object_unref((struct ws_object*) shell_surf->cache_buffer);
+    }
 
     ws_object_unref((struct ws_object*) &shell_surf->surface);
     return true;
