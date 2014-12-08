@@ -269,14 +269,14 @@ ws_abstract_shell_surface_redraw(
     struct ws_buffer* src_buff;
     src_buff = ws_wayland_buffer_get_buffer(&self->surface->img_buf);
 
-    ws_buffer_blit_at((struct ws_buffer*) my_buff, src_buff, self->x, self->y);
+    ws_buffer_blit_at((struct ws_buffer*) my_buff, src_buff,
+                      self->surface->x, self->surface->y);
 }
 
 void
 ws_abstract_shell_surface_composite(
     struct ws_monitor* monitor //!< The monitor to composite for
 ) {
-    //!< @todo implement
 }
 
 /*
