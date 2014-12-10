@@ -6,3 +6,6 @@ script:
     - cmake -DHARD_MODE=ON .
     - make
     - ctest -VV
+    - WAYSOME_LOG_LEVEL=8
+    - src/waysome &
+    - sleep 10s && pkill waysome
