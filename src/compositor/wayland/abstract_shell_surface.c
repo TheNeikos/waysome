@@ -29,8 +29,11 @@
 #include <wayland-server.h>
 #include <wayland-server-protocol.h>
 
+#include "action/manager.h"
 #include "compositor/wayland/abstract_shell_surface.h"
 #include "compositor/wayland/surface.h"
+#include "objects/message/event.h"
+#include "objects/string.h"
 #include "values/union.h"
 
 
@@ -158,6 +161,21 @@ ws_abstract_shell_surface_init(
     }
 
     self->visible = false;
+
+    struct ws_string* string = ws_string_new();
+    ws_string_set_from_raw(string, "ws.shell_spawned");
+
+    struct ws_value_object_id context;
+    ws_value_object_id_init(&context);
+    ws_value_object_id_set(&context, (struct ws_object*) self);
+
+    struct ws_event* event = ws_event_new(string, &context.val);
+
+    struct ws_reply* reply;
+    reply = ws_action_manager_process((struct ws_message*) event);
+    if (reply) {
+        ws_object_unref((struct ws_object*) reply);
+    }
 
     // we're done
     return 0;
