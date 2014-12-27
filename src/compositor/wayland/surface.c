@@ -34,6 +34,7 @@
 
 #include "compositor/internal_context.h"
 #include "compositor/monitor.h"
+#include "compositor/texture.h"
 #include "compositor/wayland/client.h"
 #include "compositor/wayland/region.h"
 #include "compositor/wayland/surface.h"
@@ -50,6 +51,8 @@
  * Forward declarations
  *
  */
+
+static struct ws_logger_context log_ctx = { .prefix = "[Compositor/Surface] " };
 
 /**
  * Destroy a surface
@@ -136,17 +139,6 @@ static void
 surface_commit_cb(
     struct wl_client* client, //!< client requesting the action
     struct wl_resource* resource //!< the resource affected by the action
-);
-
-/**
- * Helper for iterating over monitors and committing them
- *
- * @return always zero
- */
-static int
-sf_commit_blit(
-    void* buf, //!< The buffer to blit
-    void const* mon //!< The monitor of the current iteration
 );
 
 /**
@@ -262,8 +254,11 @@ ws_surface_new(
     // initialize the members
     ws_wayland_buffer_init(&self->img_buf, NULL);
 
-    return self;
+    ws_texture_init(&self->texture);
 
+    glGenBuffers(1, &self->vbo);
+
+    return self;
 cleanup_surface:
     free(self);
     return NULL;
@@ -315,11 +310,10 @@ surface_attach_cb(
     struct ws_surface* self;
     self = (struct ws_surface*) wl_resource_get_user_data(resource);
 
-    //!< @todo: handle x and y parameters
     ws_wayland_buffer_set_resource(&self->img_buf, buffer);
 
-    self->x = x;
-    self->y = y;
+    self->offset_x = x;
+    self->offset_y = y;
 }
 
 static void
@@ -388,12 +382,20 @@ surface_commit_cb(
         return;
     }
 
-    ws_buffer_transfer2texture(ws_wayland_buffer_get_buffer(&s->img_buf),
-                               &s->texture);
+    struct ws_buffer* buffer = ws_wayland_buffer_get_buffer(&s->img_buf);
+    ws_buffer_transfer2texture(buffer, &s->texture);
+    s->width = ws_buffer_width(buffer);
+    s->height = ws_buffer_height(buffer);
 
-    //!< @todo remove once the HW accelerated compositing is in place
-    ws_set_select(&ws_comp_ctx.monitors, NULL, NULL,
-                  sf_commit_blit, &s->img_buf);
+    //!< @todo remove this
+
+    if (s->parent) {
+        s->parent->width = s->width;
+        s->parent->height = s->height;
+    }
+
+    ws_log(&log_ctx, LOG_DEBUG, "Commited surface with size: %dx%d", s->width,
+            s->height);
 
     if (s->frame_callback) {
         wl_callback_send_done(s->frame_callback,
@@ -404,25 +406,6 @@ surface_commit_cb(
 
     ws_wayland_buffer_release(&s->img_buf);
 
-}
-
-static int
-sf_commit_blit(
-    void* buf,
-    void const* mon
-) {
-    struct ws_monitor* monitor = (void*) mon;
-    struct ws_buffer* buffer;
-    buffer = ws_wayland_buffer_get_buffer((struct ws_wayland_buffer*) buf);
-
-    if (!monitor->buffer ||
-            !ws_buffer_data(&monitor->buffer->obj.obj)) {
-        return 0;
-    }
-
-    ws_buffer_blit(&monitor->buffer->obj.obj, buffer);
-
-    return 0;
 }
 
 static void
@@ -449,11 +432,6 @@ sf_remove_surface(
     void const* mon
 ) {
     struct ws_surface* surface = (struct ws_surface*) _surface;
-    struct ws_monitor* monitor = (struct ws_monitor*) mon;
-
-    struct ws_set* surfaces = ws_monitor_surfaces(monitor);
-
-    ws_set_remove(surfaces, &surface->wl_obj.obj);
     ws_object_unref(&surface->wl_obj.obj);
 
     return 0;
@@ -473,7 +451,7 @@ resource_destroy(
 
     struct ws_cursor* cursor = ws_cursor_get();
 
-    if (cursor->active_surface == surface) {
+    if (cursor->active_surface == surface->parent) {
         ws_cursor_set_image(cursor, NULL);
     }
 
@@ -501,5 +479,43 @@ ws_surface_set_role(
 unlock:
     ws_object_unlock(&self->wl_obj.obj);
     return ret;
+}
+
+void
+ws_surface_redraw(
+    struct ws_surface* s //!< The surface
+) {
+    ws_log(&log_ctx, LOG_DEBUG, "Redrawing!");
+    GLushort indices[4] = {0, 1, 2, 3};
+
+    // Format is x, y,  u, v
+    int x =  s->parent->x + s->offset_x;
+    int y =  s->parent->y + s->offset_y;
+    GLfloat v[] = {
+        x,            y,              0, 0,
+        x           , y + s->height,  0, 1,
+        x + s->width, y,              1, 0,
+        x + s->width, y + s->height,  1, 1
+    };
+
+    ws_log(&log_ctx, LOG_DEBUG, "Drawing surface with size: %dx%d", s->width,
+            s->height);
+
+    ws_texture_bind(&s->texture, GL_TEXTURE_2D);
+    glActiveTexture(GL_TEXTURE0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, s->vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(v), v, GL_DYNAMIC_DRAW);
+
+    const GLint stride = 4 * sizeof(GLfloat);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, 0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride,
+            (void*) (2 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+
+    glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, indices);
 }
 

@@ -410,7 +410,7 @@ shm_transfer2texture(
     // bind texture
     ws_texture_bind(texture, GL_TEXTURE_2D);
 
-    shm_begin_access(self);
+    shm_begin_access((struct ws_buffer*) self);
 
     ws_log(&log_ctx, LOG_DEBUG, "Got texture from SHM %dx%d %d",
                  wl_shm_buffer_get_width(shm_buffer),
@@ -426,7 +426,7 @@ shm_transfer2texture(
 
 
 
-    shm_end_access(self);
+    shm_end_access((struct ws_buffer*) self);
 
     return eglGetError() == GL_NO_ERROR ? 0 : -1;
 }

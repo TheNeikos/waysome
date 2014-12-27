@@ -28,6 +28,7 @@
 #ifndef __WS_WL_SURFACE_H__
 #define __WS_WL_SURFACE_H__
 
+#include "compositor/wayland/abstract_shell_surface.h"
 #include "compositor/wayland/buffer.h"
 #include "compositor/texture.h"
 #include "objects/wayland_obj.h"
@@ -51,10 +52,12 @@ struct ws_surface {
     struct ws_region* input_region; //!< @protected input region
     struct wl_resource* frame_callback; //!< @protected frame callback
     struct wl_interface const* role; //!< @protected role of this surface
-    int32_t x; //!< @public x position of this surface
-    int32_t y; //!< @public y position of this surface
+    int32_t offset_x; //!< @public x position of this surface
+    int32_t offset_y; //!< @public y position of this surface
     int32_t width; //!< @public width of the surface
     int32_t height; //!< @public height of the surface
+    unsigned int vbo; //!< @private the vbo containing data about
+    struct ws_abstract_shell_surface* parent; //!< @private the surface parent
 };
 
 /**
@@ -103,6 +106,14 @@ int
 ws_surface_set_role(
     struct ws_surface* self, //!< the surface
     struct wl_interface const* role //!< our role
+);
+
+/**
+ *  Redraws the ws_surface into the active display
+ */
+void
+ws_surface_redraw(
+    struct ws_surface* self //!< The surface
 );
 
 #endif // __WS_WL_SURFACE_H__
