@@ -31,6 +31,7 @@ set(SOURCE_FILES
     cursor.c
     framebuffer_device.c
     gbm.c
+    gl_program.c
     keyboard.c
     module.c
     monitor.c
