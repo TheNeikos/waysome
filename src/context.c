@@ -380,7 +380,7 @@ static int
 func_get_ms_focus(
     union ws_value_union* stack
 ) {
-    struct ws_surface* surface = ws_cursor_get()->active_surface;
+    struct ws_abstract_shell_surface* surface = ws_cursor_get()->active_surface;
 
     ws_value_object_id_set(&stack[0].object_id, &surface->wl_obj.obj);
 
@@ -391,7 +391,8 @@ static int
 func_get_kb_focus(
     union ws_value_union* stack
 ) {
-    struct ws_surface* surface = ws_keyboard_get()->active_surface;
+    struct ws_abstract_shell_surface* surface;
+    surface = ws_keyboard_get()->active_surface;
 
     ws_value_object_id_set(&stack[0].object_id, &surface->wl_obj.obj);
 
@@ -417,7 +418,8 @@ func_set_ms_focus(
         return -EINVAL;
     }
 
-    struct ws_surface* surface = (struct ws_surface*) maybe_surface;
+    struct ws_abstract_shell_surface* surface;
+    surface = (struct ws_abstract_shell_surface*) maybe_surface;
     ws_cursor_set_active_surface(cursor, surface);
 
     return 0;
@@ -442,7 +444,8 @@ func_set_kb_focus(
         return -EINVAL;
     }
 
-    struct ws_surface* surface = (struct ws_surface*) maybe_surface;
+    struct ws_abstract_shell_surface* surface;
+    surface = (struct ws_abstract_shell_surface*) maybe_surface;
     ws_keyboard_set_active_surface(keyboard, surface);
 
     return 0;
