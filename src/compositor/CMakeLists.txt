@@ -26,11 +26,11 @@ set(SOURCE_FILES
     buffer/buffer.c
     buffer/egl.c
     buffer/frame.c
-    buffer/gbm.c
     buffer/image.c
     buffer/raw_buffer.c
     cursor.c
     framebuffer_device.c
+    gbm.c
     keyboard.c
     module.c
     monitor.c

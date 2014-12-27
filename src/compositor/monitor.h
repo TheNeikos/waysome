@@ -38,7 +38,7 @@
 #include <stdbool.h>
 #include <xf86drmMode.h>
 
-#include "compositor/buffer/gbm.h"
+#include "compositor/gbm.h"
 #include "compositor/monitor_mode.h"
 #include "objects/object.h"
 #include "objects/set.h"
