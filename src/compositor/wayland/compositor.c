@@ -175,11 +175,6 @@ create_surface(
         return;
     }
 
-    // TEMPORARY SOLUTION: put surface on all of the availible monitors
-    //!< @todo: integrate in new infrastructure as soon as it's up
-    ws_set_select(&ws_comp_ctx.monitors, NULL, NULL,
-                  add_surface_to_monitor, surface);
-
     // we don't need the local reference any more
     ws_object_unref(&surface->wl_obj.obj);
 }
