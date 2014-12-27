@@ -41,6 +41,8 @@
 #define __WAYSOME_ABSTRACT_SHELL_SURFACE_H__
 
 #include "objects/wayland_obj.h"
+#include <wayland-server.h>
+#include <wayland-server-protocol.h>
 
 // forward declarations
 struct ws_surface; // definition in compositor/surface.h
@@ -54,9 +56,13 @@ struct ws_abstract_shell_surface {
     struct ws_wayland_obj wl_obj; //!< @protected: The associated wayland object
     struct ws_surface* surface; //!< @public: The associated surface
     bool visible; //!< Flag for if the shell is visible
-    int32_t x; //!< @public Position in x direction
-    int32_t y; //!< @public Position in y direction
+    uint32_t width; //!< The width of the surface
+    uint32_t height; //!< The width of the surface
+    int32_t x; //!< The x position of the surface
+    int32_t y; //!< The y position of the surface
     int32_t z; //!< @public z index of this surface
+    struct ws_monitor* monitor; //!< The monitor we display on
+    struct wl_listener destroy_listener; //!< The destroy listener
 };
 
 /**

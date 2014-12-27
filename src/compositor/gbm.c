@@ -40,16 +40,6 @@
 
 /*
  *
- * Logging Context
- *
- */
-
-static struct ws_logger_context log_ctx = {
-    .prefix = "[Compositor/GBMSurface] "
-};
-
-/*
- *
  *  Forward declarations
  *
  */

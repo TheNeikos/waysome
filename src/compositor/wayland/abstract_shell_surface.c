@@ -29,8 +29,12 @@
 #include <wayland-server.h>
 #include <wayland-server-protocol.h>
 
+#include "compositor/internal_context.h"
+#include "compositor/monitor.h"
 #include "compositor/wayland/abstract_shell_surface.h"
 #include "compositor/wayland/surface.h"
+#include "objects/set.h"
+#include "util/arithmetical.h"
 #include "values/union.h"
 
 
@@ -46,6 +50,25 @@
 bool
 shell_surface_deinit(
     struct ws_object* obj
+);
+
+/**
+ * Compare callback
+ */
+int
+shell_surface_cmp(
+    struct ws_object const* obj1,
+    struct ws_object const* obj2
+);
+
+
+/**
+ * Removes the surface from a monitor
+ */
+void
+remove_surface(
+    struct wl_listener* listener,
+    void* data
 );
 
 /**
@@ -118,6 +141,8 @@ struct ws_object_attribute const WS_OBJECT_ATTRS_ABSTRACT_SHELL_SURFACE[] = {
     }, // iteration stopper
 };
 
+static struct ws_logger_context log_ctx = { .prefix = "[Compositor/ABShell] " };
+
 static const struct ws_object_function FUNCTIONS[] = {
     { .name = "setwidth",           .func = cmd_func_set_width },
     { .name = "setheight",          .func = cmd_func_set_height },
@@ -131,7 +156,7 @@ ws_object_type_id WS_OBJECT_TYPE_ID_ABSTRACT_SHELL_SURFACE = {
 
     .deinit_callback    = shell_surface_deinit,
     .hash_callback      = NULL,
-    .cmp_callback       = NULL,
+    .cmp_callback       = shell_surface_cmp,
 
     .attribute_table    = WS_OBJECT_ATTRS_ABSTRACT_SHELL_SURFACE,
     .function_table     = FUNCTIONS,
@@ -163,8 +188,24 @@ ws_abstract_shell_surface_init(
         return retval;
     }
 
-    self->visible = false;
+    self->visible = true;
 
+    ws_set_insert(&ws_comp_ctx.cursor->cur_mon->surfaces,
+                  (struct ws_object*) self);
+
+    self->monitor = ws_comp_ctx.cursor->cur_mon;
+
+    self->x = 10;
+    self->y = 10;
+
+    // ws_abstract_shell_surface_set_width_and_height(self, 250, 250);
+
+    self->surface->parent = self;
+
+    self->destroy_listener.notify = remove_surface;
+
+    struct wl_resource* res = ws_wayland_obj_get_wl_resource(self->surface);
+    wl_resource_add_destroy_listener(res, &self->destroy_listener);
     // we're done
     return 0;
 }
@@ -190,7 +231,7 @@ ws_abstract_shell_surface_set_width(
         return -EINVAL;
     }
 
-    s->width = width;
+    self->width = width;
 
     struct wl_resource* r = ws_wayland_obj_get_wl_resource(&s->wl_obj);
     if (!r) {
@@ -212,7 +253,7 @@ ws_abstract_shell_surface_set_height(
         return -EINVAL;
     }
 
-    s->height = height;
+    self->height = height;
 
     struct wl_resource* r = ws_wayland_obj_get_wl_resource(&s->wl_obj);
     if (!r) {
@@ -235,10 +276,10 @@ ws_abstract_shell_surface_set_width_and_height(
         return -EINVAL;
     }
 
-    s->width = width;
-    s->height = height;
+    self->width = width;
+    self->height = height;
 
-    struct wl_resource* r = ws_wayland_obj_get_wl_resource(&s->wl_obj);
+    struct wl_resource* r = ws_wayland_obj_get_wl_resource(&self->wl_obj);
     if (!r) {
         return -EINVAL;
     }
@@ -261,7 +302,21 @@ shell_surface_deinit(
     shell_surf = (struct ws_abstract_shell_surface*) obj;
 
     ws_object_unref(&shell_surf->surface->wl_obj.obj);
+    ws_set_remove(&shell_surf->monitor->surfaces, obj);
+    ws_log(&log_ctx, LOG_DEBUG, "Removed abstract shell surface");
+
     return true;
+}
+
+void
+remove_surface(
+    struct wl_listener* listener,
+    void* data
+) {
+    struct ws_abstract_shell_surface* self;
+    self = wl_container_of(listener, self, destroy_listener);
+
+    ws_set_remove(&self->monitor->surfaces, &self->wl_obj.obj);
 }
 
 static int
@@ -374,5 +429,48 @@ cmd_func_set_width_and_height(
 out:
     ws_object_unref(&shs->wl_obj.obj);
     return res;
+}
+
+static int
+cmd_func_set_visibility(
+    union ws_value_union* stack // The stack to use
+) {
+    if (ws_value_get_type(&stack[0].value) != WS_VALUE_TYPE_OBJECT_ID) {
+        return -EINVAL;
+    }
+
+    // `1` is the command string itself
+
+    if (ws_value_get_type(&stack[2].value) != WS_VALUE_TYPE_BOOL) {
+        return -EINVAL;
+    }
+
+    struct ws_abstract_shell_surface* self;
+    self = (struct ws_abstract_shell_surface*)
+            ws_value_object_id_get(&stack[0].object_id);
+
+    self->visible = ws_value_bool_get(&stack[2].bool_);
+
+    return 0;
+}
+
+int
+shell_surface_cmp(
+    struct ws_object const* obj1,
+    struct ws_object const* obj2
+) {
+    struct ws_abstract_shell_surface* shell1;
+    struct ws_abstract_shell_surface* shell2;
+
+    shell1 = (struct ws_abstract_shell_surface*) obj1;
+    shell2 = (struct ws_abstract_shell_surface*) obj2;
+
+    struct ws_surface* s1 = (struct ws_surface*) shell1->surface;
+    struct wl_resource* r1 = ws_wayland_obj_get_wl_resource(&s1->wl_obj);
+
+    struct ws_surface* s2 = (struct ws_surface*) shell2->surface;
+    struct wl_resource* r2 = ws_wayland_obj_get_wl_resource(&s2->wl_obj);
+
+    return signum(r1 - r2);
 }
 
