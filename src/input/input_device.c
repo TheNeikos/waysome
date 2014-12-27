@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <wayland-server.h>
 #include <wayland-server-protocol.h>
 
 #include "compositor/cursor.h"
