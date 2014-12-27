@@ -432,29 +432,6 @@ out:
     return res;
 }
 
-static int
-cmd_func_set_visibility(
-    union ws_value_union* stack // The stack to use
-) {
-    if (ws_value_get_type(&stack[0].value) != WS_VALUE_TYPE_OBJECT_ID) {
-        return -EINVAL;
-    }
-
-    // `1` is the command string itself
-
-    if (ws_value_get_type(&stack[2].value) != WS_VALUE_TYPE_BOOL) {
-        return -EINVAL;
-    }
-
-    struct ws_abstract_shell_surface* self;
-    self = (struct ws_abstract_shell_surface*)
-            ws_value_object_id_get(&stack[0].object_id);
-
-    self->visible = ws_value_bool_get(&stack[2].bool_);
-
-    return 0;
-}
-
 int
 shell_surface_cmp(
     struct ws_object const* obj1,
