@@ -37,6 +37,7 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <xkbcommon/xkbcommon.h>
+#include <wayland-server.h>
 #include <wayland-server-protocol.h>
 
 #include "objects/object.h"
@@ -47,7 +48,7 @@
 struct ws_keyboard {
     struct ws_object obj; //!< @protected Base class.
     struct xkb* xkb;
-    struct ws_surface* active_surface;
+    struct ws_abstract_shell_surface* active_surface;
     struct wl_array pressed_keys;
 };
 
@@ -119,7 +120,7 @@ ws_keyboard_send_modifiers(
 bool
 ws_keyboard_set_active_surface(
     struct ws_keyboard* self, //!< The keyboard
-    struct ws_surface* nxt_surface //!< The surface to be active
+    struct ws_abstract_shell_surface* nxt_surface //!< The surface to be active
 );
 #endif // __WS_KEYBOARD_H__
 

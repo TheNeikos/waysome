@@ -28,6 +28,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <wayland-server.h>
+#include <wayland-server-protocol.h>
 #include <xf86drmMode.h>
 
 #include "objects/object.h"
@@ -39,6 +40,7 @@
 #include "compositor/keyboard.h"
 #include "compositor/internal_context.h"
 #include "compositor/monitor.h"
+#include "compositor/wayland/abstract_shell_surface.h"
 #include "compositor/wayland/client.h"
 #include "compositor/wayland/pointer.h"
 #include "compositor/wayland/surface.h"
@@ -108,13 +110,19 @@ get_surface_under_cursor(
     int real_x = self->x + self->x_hp;
     int real_y = self->y + self->y_hp;
 
-    struct ws_surface* surface = (struct ws_surface*) _surface;
+    struct ws_abstract_shell_surface* surface;
+    surface = (struct ws_abstract_shell_surface*) _surface;
 
     // cursor is inside
     int x = surface->x;
     int y = surface->y;
     int w = surface->width;
     int h = surface->height;
+
+    if (w == 0 || h == 0) {
+        return 0;
+    }
+
 
     if (real_x < x || real_x > (x + w)) {
         return 0;
@@ -124,8 +132,14 @@ get_surface_under_cursor(
         return 0;
     }
 
-    if (ws_region_inside(surface->input_region, x - real_x, y - real_y)) {
-        *((struct ws_surface**) target) = (struct ws_surface*) _surface;
+    *((struct ws_abstract_shell_surface**) target) =
+        (struct ws_abstract_shell_surface*) _surface;
+
+    return 1;
+
+    if (ws_region_inside(surface->surface->input_region, x - real_x, y - real_y)) {
+        *((struct ws_abstract_shell_surface**) target) =
+                                   (struct ws_abstract_shell_surface*) _surface;
         return 1;
     }
 
@@ -135,59 +149,71 @@ get_surface_under_cursor(
 bool
 ws_cursor_set_active_surface(
     struct ws_cursor* self,
-    struct ws_surface* nxt_surface
+    struct ws_abstract_shell_surface* nxt_surface
 ) {
     if (self->active_surface == nxt_surface) {
+        ws_log(&log_ctx, LOG_DEBUG, "Surface already set! %p == %p",
+                self->active_surface, nxt_surface);
         return false;
     }
 
-    struct ws_surface* old_surface = self->active_surface;
+    struct ws_abstract_shell_surface* old_surface = self->active_surface;
     self->active_surface = nxt_surface;
 
     struct wl_display* display = ws_wayland_acquire_display();
     if (!display) {
+        ws_log(&log_ctx, LOG_ERR, "Could not acquire display");
         return false;
     }
 
-    // Did we leave the old surface? Well, send a leave event
-    struct wl_resource* res = ws_wayland_obj_get_wl_resource(
-            &old_surface->wl_obj);
-    if (old_surface != self->active_surface && res) {
-        struct ws_wayland_client* client = ws_wayland_client_get(res->client);
+    if (old_surface) {
+        // Did we leave the old surface? Well, send a leave event
+        struct wl_resource* res = ws_wayland_obj_get_wl_resource(
+                &old_surface->surface->wl_obj);
+        ws_log(&log_ctx, LOG_DEBUG, "Old Surface: %p", res);
+        if (old_surface != self->active_surface && res) {
+            struct ws_wayland_client* client;
+            client = ws_wayland_client_get(res->client);
 
-        struct ws_deletable_resource* cursor;
-        wl_list_for_each(cursor, &client->resources, link) {
-            int retval = ws_wayland_pointer_instance_of(cursor->resource);
-            if (!retval) {
-                continue;
+            struct ws_deletable_resource* cursor;
+            wl_list_for_each(cursor, &client->resources, link) {
+                int retval = ws_wayland_pointer_instance_of(cursor->resource);
+                if (!retval) {
+                    continue;
+                }
+                uint32_t serial = wl_display_next_serial(display);
+                wl_pointer_send_leave(cursor->resource, serial, res);
             }
-            uint32_t serial = wl_display_next_serial(display);
-            wl_pointer_send_leave(cursor->resource, serial, res);
-        }
 
-        ws_cursor_set_image(self, NULL);
-        ws_log(&log_ctx, LOG_DEBUG, "Left surface!");
+            ws_cursor_set_image(self, NULL);
+            ws_log(&log_ctx, LOG_DEBUG, "Left surface!");
+        }
     }
 
-    // Did we enter a new surface? Send a enter event!
-    res = ws_wayland_obj_get_wl_resource(&self->active_surface->wl_obj);
-    if (self->active_surface && res) {
-        struct ws_wayland_client* client = ws_wayland_client_get(res->client);
+    if (self->active_surface) {
+        // Did we enter a new surface? Send a enter event!
+        struct wl_resource* res = ws_wayland_obj_get_wl_resource(
+                                        &self->active_surface->surface->wl_obj);
+        ws_log(&log_ctx, LOG_DEBUG, "New Surface: %p", res);
+        if (res) {
+            struct ws_wayland_client* client;
+            client = ws_wayland_client_get(res->client);
 
-        struct ws_deletable_resource* cursor = NULL;
-        int surface_x = self->active_surface->x;
-        int surface_y = self->active_surface->y;
-        wl_list_for_each(cursor, &client->resources, link) {
-            int retval = ws_wayland_pointer_instance_of(cursor->resource);
-            if (!retval) {
-                continue;
+            struct ws_deletable_resource* cursor = NULL;
+            int surface_x = self->active_surface->x;
+            int surface_y = self->active_surface->y;
+            wl_list_for_each(cursor, &client->resources, link) {
+                int retval = ws_wayland_pointer_instance_of(cursor->resource);
+                if (!retval) {
+                    continue;
+                }
+                uint32_t serial = wl_display_next_serial(display);
+                wl_pointer_send_enter(cursor->resource, serial, res,
+                        self->x - surface_x,
+                        self->y - surface_y);
             }
-            uint32_t serial = wl_display_next_serial(display);
-            wl_pointer_send_enter(cursor->resource, serial, res,
-                    self->x - surface_x,
-                    self->y - surface_y);
+            ws_log(&log_ctx, LOG_DEBUG, "Entered surface!");
         }
-        ws_log(&log_ctx, LOG_DEBUG, "Entered surface!");
     }
 
     ws_wayland_release_display();
@@ -200,8 +226,8 @@ ws_cursor_set_position(
     int x,
     int y
 ) {
-    int w = ws_buffer_width(&self->cur_mon->buffer->obj.obj);
-    int h = ws_buffer_height(&self->cur_mon->buffer->obj.obj);
+    int w = self->cur_mon->current_mode->mode.hdisplay;
+    int h = self->cur_mon->current_mode->mode.vdisplay;
 
     // We use the negative hotspot position because we don't want it to go
     // off screen.
@@ -214,7 +240,7 @@ ws_cursor_set_position(
     }
 
     struct ws_set* surfaces = ws_monitor_surfaces(self->cur_mon);
-    struct ws_surface* nxt_surface = NULL;
+    struct ws_abstract_shell_surface* nxt_surface = NULL;
     ws_set_select(surfaces, NULL, NULL, get_surface_under_cursor, &nxt_surface);
 
     ws_cursor_set_active_surface(self, nxt_surface);
@@ -320,12 +346,12 @@ ws_cursor_set_button_state(
     int state
 ) {
     struct wl_display* display = ws_wayland_acquire_display();
-    if (!display) {
+    if (!display || !self->active_surface) {
         return;
     }
 
     struct wl_resource* res = ws_wayland_obj_get_wl_resource(
-            &self->active_surface->wl_obj);
+            &self->active_surface->surface->wl_obj);
     if (self->active_surface && res) {
         struct ws_wayland_client* client = ws_wayland_client_get(res->client);
 
@@ -359,8 +385,11 @@ ws_cursor_get_surface_under_cursor(
     struct ws_cursor* self
 ) {
     struct ws_set* surfaces = ws_monitor_surfaces(self->cur_mon);
-    struct ws_surface* surface = NULL;
+    struct ws_abstract_shell_surface* surface = NULL;
     ws_set_select(surfaces, NULL, NULL, get_surface_under_cursor, &surface);
-    return surface;
+    if (!surface) {
+        return NULL;
+    }
+    return surface->surface;
 }
 

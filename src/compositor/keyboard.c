@@ -42,6 +42,7 @@
 #include "objects/wayland_obj.h"
 #include "compositor/keyboard.h"
 #include "compositor/internal_context.h"
+#include "compositor/wayland/abstract_shell_surface.h"
 #include "compositor/wayland/client.h"
 #include "compositor/wayland/keyboard.h"
 #include "compositor/wayland/surface.h"
@@ -176,7 +177,8 @@ ws_keyboard_send_enter(
 
     // Did we leave the old surface? Well, send a leave event
     struct wl_resource* res;
-    res = ws_wayland_obj_get_wl_resource(&self->active_surface->wl_obj);
+    res = ws_wayland_obj_get_wl_resource(
+                                        &self->active_surface->surface->wl_obj);
 
     if (self->active_surface && res) {
         struct ws_wayland_client* client = ws_wayland_client_get(res->client);
@@ -208,7 +210,7 @@ ws_keyboard_send_leave(
 
     // Did we leave the old surface? Well, send a leave event
     struct wl_resource* res = ws_wayland_obj_get_wl_resource(
-            &self->active_surface->wl_obj);
+            &self->active_surface->surface->wl_obj);
 
     if (self->active_surface && res) {
         struct ws_wayland_client* client = ws_wayland_client_get(res->client);
@@ -443,7 +445,7 @@ deinit_keyboard(
 bool
 ws_keyboard_set_active_surface(
     struct ws_keyboard* self,
-    struct ws_surface* nxt_surface
+    struct ws_abstract_shell_surface* nxt_surface
 ) {
     if (self->active_surface == nxt_surface) {
         return false;

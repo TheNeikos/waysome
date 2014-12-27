@@ -57,7 +57,7 @@ struct ws_cursor {
     int y; //!< @private position in the current monitor
     int x_hp; //!< @private position hotspot of the monitor
     int y_hp; //!< @private position hotspot of the monitor
-    struct ws_surface* active_surface;
+    struct ws_abstract_shell_surface* active_surface;
 };
 
 /**
@@ -194,7 +194,7 @@ ws_cursor_get_surface_under_cursor(
 bool
 ws_cursor_set_active_surface(
     struct ws_cursor* self, //!< The cursor
-    struct ws_surface* nxt_surface //!< The surface to be active
+    struct ws_abstract_shell_surface* nxt_surface //!< The surface to be active
 );
 
 #endif // __WS_CURSOR_H__
