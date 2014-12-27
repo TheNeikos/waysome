@@ -46,6 +46,8 @@ texture_deinit(
  *
  */
 
+static struct ws_logger_context log_ctx = { .prefix = "[Compositor/Texture] " };
+
 ws_object_type_id WS_OBJECT_TYPE_ID_TEXTURE = {
     .supertype  = &WS_OBJECT_TYPE_ID_OBJECT,
     .typestr    = "ws_texture",
@@ -79,8 +81,14 @@ ws_texture_init(
 
     // get texture
     glGenTextures(1, &self->texture);
+    glBindTexture(GL_TEXTURE_2D, self->texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
-    return eglGetError() == GL_NO_ERROR ? 0 : -1;
+    return glGetError() == GL_NO_ERROR ? 0 : -1;
 }
 
 struct ws_texture*
@@ -99,6 +107,7 @@ ws_texture_bind(
     struct ws_texture* self,
     GLenum target
 ) {
+    ws_log(&log_ctx, LOG_DEBUG, "Binding texture %d", self->texture);
     glBindTexture(target, self->texture);
     return 0;
 }
