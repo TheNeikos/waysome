@@ -403,8 +403,6 @@ shm_transfer2texture(
 
     // get the metadata
     struct wl_shm_buffer* shm_buffer = wl_shm_buffer_get(res);
-    struct ws_egl_fmt const* fmt;
-    fmt = ws_egl_fmt_from_shm_fmt(wl_shm_buffer_get_format(shm_buffer));
 
     glActiveTexture(GL_TEXTURE0);
     // bind texture
