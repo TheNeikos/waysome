@@ -204,7 +204,8 @@ ws_abstract_shell_surface_init(
 
     self->destroy_listener.notify = remove_surface;
 
-    struct wl_resource* res = ws_wayland_obj_get_wl_resource(self->surface);
+    struct wl_resource* res;
+    res = ws_wayland_obj_get_wl_resource(&self->surface->wl_obj);
     wl_resource_add_destroy_listener(res, &self->destroy_listener);
     // we're done
     return 0;
