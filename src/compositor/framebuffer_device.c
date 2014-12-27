@@ -34,6 +34,9 @@
 #include <xf86drm.h>
 
 #include <gbm.h>
+#include <EGL/egl.h>
+#define EGL_EGLEXT_PROTOTYPES 1
+#include <EGL/eglext.h>
 
 #include "compositor/framebuffer_device.h"
 #include "compositor/internal_context.h"
@@ -137,15 +140,31 @@ ws_framebuffer_device_get_egl_display(
     // get the GBM device to base the EGL stuff on
     struct gbm_device* gbm_dev = ws_framebuffer_device_get_gbm_dev(self);
     if (!gbm_dev) {
+        ws_log(&log_ctx, LOG_ERR, "Could not get gbm device");
         return NULL;
     }
 
     // get and initialize the display
-    EGLDisplay disp = eglGetDisplay(gbm_dev);
+    EGLDisplay disp = eglGetPlatformDisplayEXT(EGL_PLATFORM_GBM_MESA, gbm_dev,
+                                               NULL);
 
-    if (!eglInitialize(disp, NULL, NULL)) {
+    EGLint major, minor;
+
+    if (!eglInitialize(disp, &major, &minor)) {
         return NULL;
     }
+
+    if (!eglBindAPI(EGL_OPENGL_ES_API)) {
+        ws_log(&log_ctx, LOG_ERR, "Could not bind OPENGL ES API");
+        return NULL;
+    }
+
+    const char* ver = eglQueryString(disp, EGL_VERSION);
+    ws_log(&log_ctx, LOG_DEBUG, "Initialize egl with version %d.%d (%s)",
+            major, minor, ver);
+    const char* extensions = eglQueryString(disp, EGL_EXTENSIONS);
+
+    ws_log(&log_ctx, LOG_ERR, "Current EGL Extensions: %s", extensions);
 
     EGLint egl_config_attribs[] = {
         EGL_BUFFER_SIZE,        32,
@@ -156,6 +175,7 @@ ws_framebuffer_device_get_egl_display(
         EGL_NONE,
     };
 
+    // We check how many configurations exist for us to use
     EGLint num_configs;
     int ret = eglGetConfigs(disp, NULL, 0, &num_configs);
     if (!ret) {
@@ -164,7 +184,7 @@ ws_framebuffer_device_get_egl_display(
     }
 
     // This is a weird moment where we use /parts/ of the array, but can't free
-    // all of it!
+    // all of it! And EGLConfig is a void*...
     EGLConfig* configs = calloc(num_configs, sizeof(*configs));
 
     ret = eglChooseConfig(disp, egl_config_attribs, configs, num_configs,
@@ -176,6 +196,8 @@ ws_framebuffer_device_get_egl_display(
 
     EGLConfig effective_config = NULL;
 
+    // Here we iterate through the available configs and pick the one that fits
+    // our actual config! That is XRGB with 8 bits each
     for (int i = 0; i < num_configs; ++i) {
         EGLint gbm_format;
 
@@ -193,11 +215,26 @@ ws_framebuffer_device_get_egl_display(
         }
     }
 
+    self->egl_disp = disp;
     self->egl_conf = effective_config;
-    self->egl_ctx  = eglCreateContext(disp, effective_config, NULL, NULL);
 
-    free(configs);
-    return self->egl_disp = disp;
+    EGLint ctx_conf[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE
+    };
+
+    // We do not share this context, so thus we say NO_CONTEXT here
+    self->egl_ctx  = eglCreateContext(disp, effective_config, EGL_NO_CONTEXT,
+                                      ctx_conf);
+
+    int err;
+    if ((err = eglGetError()) != EGL_SUCCESS) {
+        ws_log(&log_ctx, LOG_ERR, "Could not create context %d", err);
+        return NULL;
+    }
+
+    // And we return stuff!
+    return self->egl_disp;
 }
 
 /*
