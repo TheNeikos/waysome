@@ -128,12 +128,6 @@ ws_compositor_deinit(
 );
 
 static int
-blit_duck_on_monitor(
-    void* dummy,
-    void const* mon
-);
-
-static int
 set_monitor_modes(
     void* dummy,
     void const* mon
@@ -184,16 +178,6 @@ ws_compositor_init(void) {
         return retval;
     }
 
-    const struct ws_egl_fmt* fmt = ws_egl_fmt_get_rgba();
-
-    //!< @todo: Port to buffer code once it is implemented
-    struct ws_image_buffer* duck = ws_image_buffer_from_png("duck.png", fmt);
-
-    ws_log(&log_ctx, LOG_DEBUG, "Starting blitting");
-    ws_set_select(&ws_comp_ctx.monitors, NULL, NULL,
-            blit_duck_on_monitor, duck);
-
-
     // initialize wayland specific stuff
     struct wl_display* display = ws_wayland_acquire_display();
     if (!display) {
@@ -237,7 +221,11 @@ ws_compositor_init(void) {
         return retval;
     }
 
-    fmt = ws_egl_fmt_get_argb();
+    struct ws_egl_fmt const* fmt = ws_egl_fmt_get_argb();
+    if (!ws_framebuffer_device_get_egl_display(ws_comp_ctx.fb)) {
+        ws_log(&log_ctx, LOG_CRIT, "Could not get a EGL compatible display!");
+        return -EINVAL;
+    }
 
     //!< @todo: Make this more abstract
     struct ws_image_buffer* cursor =
@@ -267,31 +255,6 @@ cleanup_display:
  * Internal implementation
  *
  */
-
-
-static int
-blit_duck_on_monitor(
-    void* img,
-    void const* mon
-) {
-    struct ws_monitor* monitor = (struct ws_monitor*) mon;
-    struct ws_image_buffer* duck = (struct ws_image_buffer*) img;
-
-    if (!monitor->connected) {
-        ws_log(&log_ctx, LOG_DEBUG, "Monitor %d is not connected",
-                monitor->crtc);
-        return 0;
-    }
-    if (!monitor->current_mode) {
-        ws_log(&log_ctx, LOG_DEBUG, "Not blitting into crtc %d", monitor->crtc);
-        return 0;
-    }
-    ws_log(&log_ctx, LOG_DEBUG, "Copying into monitor with name: %s",
-            monitor->current_mode->mode.name);
-    ws_buffer_blit((struct ws_buffer*) monitor->buffer,
-            (struct ws_buffer*) duck);
-    return 0;
-}
 
 static void
 ws_compositor_deinit(
@@ -412,8 +375,7 @@ find_crtc(
 
     ws_log(&log_ctx, LOG_DEBUG,
             "Could not find suitable Encoder for crtc with dim: %dx%d.",
-            ws_buffer_width(&connector->buffer->obj.obj),
-            ws_buffer_height(&connector->buffer->obj.obj));
+            "Could not find suitable Encoder for crtc.");
     return -ENOENT;
 }
 
