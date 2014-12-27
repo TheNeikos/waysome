@@ -56,6 +56,7 @@
 struct ws_wayland_buffer {
     struct ws_wayland_obj wl_obj; //!< @protected Base class
     struct ws_buffer buf; //!< @protected
+    bool got_egl_image; //!< @private did we try getting an egl image?
 };
 
 /**

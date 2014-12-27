@@ -137,6 +137,27 @@ egl_transfer2texture(
 );
 
 /**
+ * Get the buffer's width
+ *
+ * @return width of the buffer's contents
+ */
+static int32_t
+egl_get_width(
+    struct ws_buffer const* self
+);
+
+/**
+ * Get the buffer's height
+ *
+ * @return height of the buffer's contents
+ */
+static int32_t
+egl_get_height(
+    struct ws_buffer const* self
+);
+
+
+/**
  * Begin a transaction
  */
 static void
@@ -158,7 +179,7 @@ egl_end_access(
  *
  */
 
-static struct ws_logger_context log_ctx = { .prefix = "[Compositor/Surface] " };
+static struct ws_logger_context log_ctx = { .prefix = "[Compositor/Buffer] " };
 
 /**
  * Buffer type
@@ -200,8 +221,8 @@ static ws_buffer_type_id egl_buffer_type = {
         .function_table = NULL,
     },
     .get_data           = NULL,
-    .get_width          = NULL,
-    .get_height         = NULL,
+    .get_width          = egl_get_width,
+    .get_height         = egl_get_height,
     .get_stride         = NULL,
     .get_format         = NULL,
     .transfer2texture   = egl_transfer2texture,
@@ -276,12 +297,18 @@ ws_wayland_buffer_set_resource(
     struct ws_wayland_buffer* self,
     struct wl_resource* r
 ) {
+
+    if (self->wl_obj.resource == r) {
+        return;
+    }
+
     if (wl_shm_buffer_get(r) == NULL) { // we get NULL if it is not a SHM buffer
         self->buf.obj.id = &egl_buffer_type.type;
     } else { // ... kay... it's SHM
         self->buf.obj.id = &shm_buffer_type.type;
     }
 
+    self->got_egl_image = false;
     ws_wayland_obj_set_wl_resource(&self->wl_obj, r);
 }
 
@@ -379,15 +406,27 @@ shm_transfer2texture(
     struct ws_egl_fmt const* fmt;
     fmt = ws_egl_fmt_from_shm_fmt(wl_shm_buffer_get_format(shm_buffer));
 
+    glActiveTexture(GL_TEXTURE0);
     // bind texture
     ws_texture_bind(texture, GL_TEXTURE_2D);
 
-    // perform the final update
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-                 wl_shm_buffer_get_stride(shm_buffer)/fmt->bpp,
-                 wl_shm_buffer_get_height(shm_buffer), 0,
-                 fmt->egl.fmt, fmt->egl.type,
-                 wl_shm_buffer_get_data(shm_buffer));
+    shm_begin_access(self);
+
+    ws_log(&log_ctx, LOG_DEBUG, "Got texture from SHM %dx%d %d",
+                 wl_shm_buffer_get_width(shm_buffer),
+                 wl_shm_buffer_get_height(shm_buffer),
+                 wl_shm_buffer_get_stride(shm_buffer));
+
+    //perform the final update
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT,
+            wl_shm_buffer_get_width(shm_buffer),
+            wl_shm_buffer_get_height(shm_buffer), 0,
+            GL_BGRA_EXT, GL_UNSIGNED_BYTE,
+            wl_shm_buffer_get_data(shm_buffer));
+
+
+
+    shm_end_access(self);
 
     return eglGetError() == GL_NO_ERROR ? 0 : -1;
 }
@@ -421,19 +460,56 @@ egl_transfer2texture(
     struct ws_buffer const* self,
     struct ws_texture* texture
 ) {
-    struct ws_wayland_buffer* wbuf = (struct ws_wayland_buffer*) self;
-    EGLDisplay dpy = ws_comp_ctx.fb->egl_disp;
+    struct ws_wayland_buffer* wbuf = wl_container_of(self, wbuf, buf);
+
+    if (wbuf->got_egl_image) {
+        return 0;
+    }
+
+    EGLDisplay dpy = ws_framebuffer_device_get_egl_display(ws_comp_ctx.fb);
+
     EGLImageKHR gltex = eglCreateImageKHR(dpy, NULL, EGL_WAYLAND_BUFFER_WL,
                                           wbuf->wl_obj.resource, NULL);
+
+    wbuf->got_egl_image = true;
+
     if (gltex == NULL) {
+        ws_log(&log_ctx, LOG_ERR, "Could not get egl img for wl_buffer %x %p",
+                eglGetError(), (void*) wbuf->wl_obj.resource);
         return -ENOENT;
     }
+
+    ws_log(&log_ctx, LOG_DEBUG, "Got the egl image %d", gltex);
 
     ws_texture_bind(texture, GL_TEXTURE_2D);
 
     glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, gltex);
 
     return eglGetError() == GL_NO_ERROR ? 0 : -1;
+}
+
+static int32_t
+egl_get_width(
+    struct ws_buffer const* self
+) {
+    struct ws_wayland_buffer* wbuf = wl_container_of(self, wbuf, buf);
+    EGLDisplay dpy = ws_framebuffer_device_get_egl_display(ws_comp_ctx.fb);
+
+    int32_t width = 0;
+    eglQueryWaylandBufferWL(dpy, wbuf->wl_obj.resource, EGL_WIDTH, &width);
+    return width;
+}
+
+static int32_t
+egl_get_height(
+    struct ws_buffer const* self
+) {
+    struct ws_wayland_buffer* wbuf = wl_container_of(self, wbuf, buf);
+    EGLDisplay dpy = ws_framebuffer_device_get_egl_display(ws_comp_ctx.fb);
+
+    int32_t height = 0;
+    eglQueryWaylandBufferWL(dpy, wbuf->wl_obj.resource, EGL_HEIGHT, &height);
+    return height;
 }
 
 static void
@@ -461,6 +537,9 @@ ws_wayland_buffer_release(
         return;
     }
     struct wl_resource* res = ws_wayland_obj_get_wl_resource(&self->wl_obj);
+    if (!res) {
+        return;
+    }
     wl_buffer_send_release(res);
 }
 
