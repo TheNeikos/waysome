@@ -36,6 +36,7 @@
 
 #include <pthread.h>
 #include <stdbool.h>
+#include <gbm.h>
 #include <xf86drmMode.h>
 
 #include "compositor/gbm.h"
@@ -55,7 +56,8 @@ struct ws_monitor {
     bool connected; //!< @public is the monitor connected?
     int id; //!< @public the id of the monitor relative to the fb_dev
 
-    struct ws_gbm_buffer* buffer; //!< @public The frame buffer
+    struct ws_gbm_surface* gbm_surf; //!< @public The gbm_surface
+    EGLSurface egl_surf; //!< @public the egl surface
 
     struct ws_framebuffer_device* fb_dev; //!< @public Framebuffer Device
     struct ws_monitor_mode* current_mode;
@@ -73,6 +75,8 @@ struct ws_monitor {
     struct wl_resource* resource;
     int phys_width;
     int phys_height;
+
+    ev_io event_watcher; //!< The watcher for pageflips
 };
 
 /**
@@ -165,6 +169,14 @@ ws_monitor_copy_mode(
 void
 ws_monitor_publish(
     struct ws_monitor* self
+);
+
+/**
+ * Callback meant for a ws_set_select
+ */
+int
+ws_monitor_redraw(
+    void const* self_ //!< The monitor object
 );
 
 #endif // __WS_OBJECTS_MONITOR_H__

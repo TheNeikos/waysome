@@ -37,10 +37,19 @@
 #include <wayland-server-protocol.h>
 #include <xf86drm.h>
 
+#include <GLES2/gl2.h>
+#include <EGL/egl.h>
+#define EGL_EGLEXT_PROTOTYPES 1
+#include <EGL/eglext.h>
+#include <EGL/eglmesaext.h>
+
+
 #include "compositor/buffer/image.h"
 #include "compositor/framebuffer_device.h"
 #include "compositor/internal_context.h"
 #include "compositor/monitor.h"
+#include "compositor/wayland/abstract_shell_surface.h"
+#include "compositor/wayland/surface.h"
 #include "logger/module.h"
 #include "objects/object.h"
 #include "util/wayland.h"
@@ -81,6 +90,28 @@ static int
 publish_modes(
     void* _data,
     void const* _mode
+);
+
+static int
+redraw_surfaces(
+    void* dummy,
+    void const* surf_
+);
+
+static void
+monitor_event(
+    EV_P_
+    ev_io* w,
+    int revents
+);
+
+static void
+handle_page_flip(
+    int fd,
+    unsigned int sequence,
+    unsigned int tv_sec,
+    unsigned int tv_usec,
+    void* monitor
 );
 
 /*
@@ -172,23 +203,144 @@ ws_monitor_populate_fb(
         return;
     }
 
-    self->buffer = ws_gbm_buffer_new(
-            self->fb_dev,
+    self->gbm_surf = ws_gbm_surface_new(
+            self->fb_dev, self,
             self->current_mode->mode.hdisplay,
             self->current_mode->mode.vdisplay
     );
-    if (!self->buffer) {
-        ws_log(&log_ctx, LOG_CRIT, "Could not create Framebuffer");
+    if (!self->gbm_surf) {
+        ws_log(&log_ctx, LOG_CRIT, "Could not create GBM Surface");
     }
+
+    struct ev_loop* loop = EV_DEFAULT;
+    ev_io_init(&self->event_watcher, monitor_event, self->fb_dev->fd, EV_READ);
+    ev_io_start(loop, &self->event_watcher);
+
     self->saved_crtc = drmModeGetCrtc(ws_comp_ctx.fb->fd, self->crtc);
 
-    int ret = drmModeSetCrtc(ws_comp_ctx.fb->fd, self->crtc,
-                             self->buffer->fb, 0, 0, &self->conn, 1,
-                             &self->current_mode->mode);
-    if (ret) {
-        ws_log(&log_ctx, LOG_ERR, "Could not set the CRTC for self %d.",
-                self->crtc);
+    struct ws_framebuffer_device* fb_dev = ws_comp_ctx.fb;
+
+    EGLDisplay disp = ws_framebuffer_device_get_egl_display(fb_dev);
+
+    struct wl_display* wl_disp = ws_wayland_acquire_display();
+
+    int ret = eglBindWaylandDisplayWL(disp, wl_disp);
+
+    ws_wayland_release_display();
+
+    if (eglGetError() != EGL_SUCCESS || !ret) {
+        ws_log(&log_ctx, LOG_CRIT, "Could not bind wl display to egl");
+        return;
     }
+
+    struct gbm_surface* surf = self->gbm_surf->surf;
+
+    self->egl_surf = eglCreatePlatformWindowSurfaceEXT(disp,
+                                                       fb_dev->egl_conf,
+                                                       surf,
+                                                       NULL);
+
+    int err;
+    if ((err = eglGetError()) != EGL_SUCCESS || self->egl_surf == NULL) {
+        ws_log(&log_ctx, LOG_ERR, "Could not create window surface %x", err);
+        return;
+    }
+
+    ret = eglMakeCurrent(disp, self->egl_surf,
+                             self->egl_surf, fb_dev->egl_ctx);
+
+    if (!ret) {
+        err = eglGetError();
+        ws_log(&log_ctx, LOG_ERR, "Could not make surface current %x",
+               err);
+        return;
+    }
+
+    // glViewport(0, 0, self->current_mode->mode.hdisplay,
+    //                  self->current_mode->mode.vdisplay);
+
+    // Shader sources
+    const GLchar* vertexSource =
+        "#version 100\n"
+        "attribute vec2 position;"
+        "attribute vec2 UV;"
+        "uniform float size_x;"
+        "uniform float size_y;"
+        "varying vec2 uv;"
+        "void main() {"
+        "   float left = 0.0;"
+        "   float right = size_y;"
+        "   float lower = size_x;"
+        "   float upper = 0.0;"
+        "   float far = 1.0;"
+        "   float near = -1.0;"
+        "   mat4 proj = mat4( 2.0 / (right - left), 0.0, 0.0, -(right + left)/(right - left),"
+        "                     0.0, 2.0 / (upper - lower), 0.0,  -(upper + lower)/(upper - lower),"
+        "                     0.0, 0.0,         -2.0 / (far - near), -(far + near)/(far - near),"
+        "                     0.0, 0.0,          0.0,  1.0);"
+        "   gl_Position = vec4(position, 1.0, 1.0) * proj;"
+        "   uv = UV;"
+        "}";
+    const GLchar* fragmentSource =
+        "#version 100\n"
+        "precision mediump float;"
+        "varying vec2 uv;"
+        "uniform sampler2D tex;"
+        "void main() {"
+        "   gl_FragColor = vec4(texture2D(tex, uv).rgb, 1);"
+        "}";
+
+    // Create and compile the vertex shader
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexSource, NULL);
+    glCompileShader(vertexShader);
+
+    char info[500];
+    int size;
+    glGetShaderInfoLog(vertexShader, 500, &size, info);
+
+    if (size > 0) {
+        ws_log(&log_ctx, LOG_ERR, "Shader %u: %s", vertexShader, info);
+    }
+
+    // Create and compile the fragment shader
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+    glCompileShader(fragmentShader);
+
+    glGetShaderInfoLog(fragmentShader, 500, &size, info);
+
+    if (size > 0) {
+        ws_log(&log_ctx, LOG_ERR, "Shader %u: %s", fragmentShader, info);
+    }
+
+    // Link the vertex and fragment shader into a shader program
+    GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glBindAttribLocation(shaderProgram, 0, "position");
+    glBindAttribLocation(shaderProgram, 1, "UV");
+    glLinkProgram(shaderProgram);
+    glUseProgram(shaderProgram);
+
+    glGetProgramInfoLog(shaderProgram, 500, &size, info);
+
+    if (size > 0) {
+        ws_log(&log_ctx, LOG_ERR, "Program error %u: %s", shaderProgram, info);
+    }
+
+    ws_log(&log_ctx, LOG_DEBUG, "Using shader program %d", shaderProgram);
+
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glClearColor(0.2f, 0.2f, 0.3f, 1.0f);
+
+    glViewport(0, 0,
+            self->current_mode->mode.hdisplay,
+            self->current_mode->mode.vdisplay);
+
+
+    ws_monitor_redraw(self);
     return;
 }
 
@@ -259,6 +411,44 @@ ws_monitor_add_mode(
     //!< @todo: Add more information like vsync etc...
     ws_set_insert(&self->modes, &mode->obj);
     return mode;
+}
+
+int
+ws_monitor_redraw(
+    void const* self_ //!< The monitor object
+) {
+    struct ws_monitor* self = (struct ws_monitor*) self_;
+
+    if (!self->gbm_surf) {
+        return 0;
+    }
+
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    GLint shaderProgram;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &shaderProgram);
+
+    glUniform1f(glGetUniformLocation(shaderProgram, "size_y"),
+                 self->current_mode->mode.hdisplay);
+    glUniform1f(glGetUniformLocation(shaderProgram, "size_x"),
+                 self->current_mode->mode.vdisplay);
+
+    glUniform1i(glGetUniformLocation(shaderProgram, "tex"), 0);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        ws_log(&log_ctx, LOG_CRIT, "Framebuffer is not complete!");
+        return 1;
+    }
+
+    ws_set_select(&self->surfaces, NULL, NULL, redraw_surfaces, NULL);
+
+    eglSwapBuffers(ws_comp_ctx.fb->egl_disp, self->egl_surf);
+
+    ws_gbm_surface_lock(self->gbm_surf, self);
+
+    ws_gbm_surface_flip(self->gbm_surf, self);
+
+    return 0;
 }
 
 /*
@@ -337,6 +527,10 @@ monitor_deinit(
                 &self->saved_crtc->mode);
     }
 
+    if (self->gbm_surf) {
+        ws_object_unref(&self->gbm_surf->obj);
+    }
+
     ws_object_deinit((struct ws_object*) &self->surfaces);
     return true;
 }
@@ -368,3 +562,52 @@ monitor_cmp(
     return 0;
 }
 
+static int
+redraw_surfaces(
+    void* dummy,
+    void const* surf_
+) {
+    struct ws_abstract_shell_surface* surf;
+    surf = (struct ws_abstract_shell_surface*) surf_;
+
+    if (!surf->surface) {
+        return 0;
+    }
+
+    ws_surface_redraw(surf->surface);
+    return 0;
+}
+
+
+static void
+monitor_event(
+    EV_P_
+    ev_io* w,
+    int revents
+) {
+    struct ws_monitor* self = wl_container_of(w, self, event_watcher);
+
+    drmEventContext ev = {
+        .version = DRM_EVENT_CONTEXT_VERSION,
+        .page_flip_handler = handle_page_flip,
+        .vblank_handler = NULL
+    };
+
+    ws_log(&log_ctx, LOG_DEBUG, "LIBEV handled drm event");
+
+    drmHandleEvent(self->fb_dev->fd, &ev);
+}
+
+static void
+handle_page_flip(
+    int fd,
+    unsigned int sequence,
+    unsigned int tv_sec,
+    unsigned int tv_usec,
+    void* monitor
+) {
+    struct ws_monitor* self = (struct ws_monitor*) monitor;
+    ws_log(&log_ctx, LOG_DEBUG, "Flippin' the surface!");
+    ws_gbm_surface_release(self->gbm_surf);
+    ws_monitor_redraw(self);
+}
