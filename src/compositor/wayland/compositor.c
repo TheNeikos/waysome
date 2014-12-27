@@ -92,14 +92,6 @@ bind_compositor(
     uint32_t serial //!< serial to give the compositor
 );
 
-/**
- * Add the surface to a monitor
- */
-static int add_surface_to_monitor(
-    void* surface_, //!< pointer to the surface
-    void const* monitor_ //!< pointer to the monitor
-);
-
 /*
  *
  * Internal constants
@@ -209,31 +201,5 @@ bind_compositor(
 
     // set the implementation of the resource
     wl_resource_set_implementation(resource, &interface, NULL, NULL);
-}
-
-static int add_surface_to_monitor(
-    void* surface_,
-    void const* monitor_
-) {
-    struct ws_monitor* monitor = (struct ws_monitor*) monitor_;
-    struct ws_surface* surface = (struct ws_surface*) surface_;
-
-    monitor = getref(monitor);
-
-    struct ws_set* surfaces = ws_monitor_surfaces(monitor);
-    if (!surfaces) {
-        goto cleanup_monitor;
-    }
-
-    int retval = ws_set_insert(surfaces,
-                               ws_object_getref(&surface->wl_obj.obj));
-    if (retval < 0) {
-        // if the insertion failed, we unref and carry on
-        ws_object_unref(&surface->wl_obj.obj);
-    }
-
-cleanup_monitor:
-    ws_object_unref(&monitor->obj);
-    return 0;
 }
 
