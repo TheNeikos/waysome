@@ -151,6 +151,7 @@ ws_framebuffer_device_get_egl_display(
     EGLint major, minor;
 
     if (!eglInitialize(disp, &major, &minor)) {
+        ws_log(&log_ctx, LOG_CRIT, "Could not initialize EGL ES.");
         return NULL;
     }
 
