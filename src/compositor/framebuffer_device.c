@@ -188,6 +188,11 @@ ws_framebuffer_device_get_egl_display(
     // all of it! And EGLConfig is a void*...
     EGLConfig* configs = calloc(num_configs, sizeof(*configs));
 
+    if (!configs) {
+        ws_log(&log_ctx, LOG_CRIT, "Allocation failed");
+        return NULL;
+    }
+
     ret = eglChooseConfig(disp, egl_config_attribs, configs, num_configs,
                             &num_configs);
     if (!ret || !num_configs) {
