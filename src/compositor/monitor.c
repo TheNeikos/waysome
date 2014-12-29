@@ -331,15 +331,20 @@ ws_monitor_populate_fb(
 
     ws_log(&log_ctx, LOG_DEBUG, "Using shader program %d", shaderProgram);
 
+    // Set the blend function for alpha blending
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    // Enable alpha blending
     glEnable(GL_BLEND);
+    //!< @todo, make this settable through a transaction
     glClearColor(0.2f, 0.2f, 0.3f, 1.0f);
 
+    // Tell EGL how big the display is!
     glViewport(0, 0,
             self->current_mode->mode.hdisplay,
             self->current_mode->mode.vdisplay);
 
 
+    //!< Kick off the draw loop
     ws_monitor_redraw(self);
     return;
 }
