@@ -137,6 +137,8 @@ get_surface_under_cursor(
 
     return 1;
 
+    //!< @todo Reimplement once regions are working
+
     if (ws_region_inside(surface->surface->input_region, x - real_x, y - real_y)) {
         *((struct ws_abstract_shell_surface**) target) =
                                    (struct ws_abstract_shell_surface*) _surface;
