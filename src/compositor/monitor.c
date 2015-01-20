@@ -256,6 +256,7 @@ ws_monitor_populate_fb(
         return;
     }
 
+
     // glViewport(0, 0, self->current_mode->mode.hdisplay,
     //                  self->current_mode->mode.vdisplay);
 
@@ -426,6 +427,20 @@ ws_monitor_redraw(
 
     if (!self->gbm_surf) {
         return 0;
+    }
+
+    static int test = 0;
+    if (!test) {
+        eglSwapBuffers(ws_comp_ctx.fb->egl_disp, self->egl_surf);
+        ws_gbm_surface_lock(self->gbm_surf, self);
+
+        short cur_fb = self->gbm_surf->cur_fb;
+        drmModeSetCrtc(ws_comp_ctx.fb->fd, self->crtc,
+                self->gbm_surf->fb[cur_fb].handle, 0, 0,
+                &self->conn, 1, &self->current_mode->mode);
+
+        ws_gbm_surface_release(self->gbm_surf);
+        test = 1;
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
