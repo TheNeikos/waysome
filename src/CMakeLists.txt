@@ -93,6 +93,8 @@ target_link_libraries(waysome
 
     ${EV_LIBRARIES}
     m
+    ${SOIL_LIBRARIES}
+    GL
 )
 
 

@@ -195,8 +195,11 @@ ws_abstract_shell_surface_init(
 
     self->monitor = ws_comp_ctx.cursor->cur_mon;
 
+    static h = 10;
     self->x = 10;
-    self->y = 10;
+    self->y = h;
+
+    h += 600;
 
     // ws_abstract_shell_surface_set_width_and_height(self, 250, 250);
 

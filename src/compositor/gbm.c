@@ -91,7 +91,7 @@ ws_gbm_surface_new(
         goto cleanup_tmp;
     }
 
-    tmp->surf = gbm_surface_create(gbm, width, height,  GBM_BO_FORMAT_XRGB8888,
+    tmp->surf = gbm_surface_create(gbm, width, height,  GBM_BO_FORMAT_ARGB8888,
                                    GBM_BO_USE_RENDERING);
 
     if (!tmp->surf) {

@@ -41,6 +41,7 @@
 
 #include "compositor/gbm.h"
 #include "compositor/monitor_mode.h"
+#include "compositor/texture.h"
 #include "objects/object.h"
 #include "objects/set.h"
 
@@ -77,6 +78,11 @@ struct ws_monitor {
     int phys_height;
 
     ev_io event_watcher; //!< The watcher for pageflips
+
+    struct {
+        GLuint vbo;
+        struct ws_texture texture;
+    } tmp;
 };
 
 /**

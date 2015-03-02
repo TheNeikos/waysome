@@ -40,6 +40,7 @@ find_package(WaylandServer REQUIRED)
 find_package(XKBCommon REQUIRED)
 find_package(Yajl REQUIRED)
 find_package(libreset REQUIRED)
+find_package(SOIL REQUIRED)
 
 #
 # Enable testing

@@ -36,6 +36,7 @@
 #include <wayland-server.h>
 #include <wayland-server-protocol.h>
 #include <xf86drm.h>
+#include <SOIL/SOIL.h>
 
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
@@ -218,13 +219,16 @@ ws_monitor_populate_fb(
 
     self->saved_crtc = drmModeGetCrtc(ws_comp_ctx.fb->fd, self->crtc);
 
+    int ret = drmModeSetCrtc(ws_comp_ctx.fb->fd, self->crtc, 0,
+            0, 0, &self->conn, 1, &self->current_mode->mode);
+
     struct ws_framebuffer_device* fb_dev = ws_comp_ctx.fb;
 
     EGLDisplay disp = ws_framebuffer_device_get_egl_display(fb_dev);
 
     struct wl_display* wl_disp = ws_wayland_acquire_display();
 
-    int ret = eglBindWaylandDisplayWL(disp, wl_disp);
+    ret = eglBindWaylandDisplayWL(disp, wl_disp);
 
     ws_wayland_release_display();
 
@@ -430,17 +434,19 @@ ws_monitor_redraw(
     }
 
     static int test = 0;
-    if (!test) {
-        eglSwapBuffers(ws_comp_ctx.fb->egl_disp, self->egl_surf);
-        ws_gbm_surface_lock(self->gbm_surf, self);
+    if (test == 10) {
+        glGenBuffers(1, &self->tmp.vbo);
+        glActiveTexture(GL_TEXTURE0);
+        ws_texture_init(&self->tmp.texture);
 
-        short cur_fb = self->gbm_surf->cur_fb;
-        drmModeSetCrtc(ws_comp_ctx.fb->fd, self->crtc,
-                self->gbm_surf->fb[cur_fb].handle, 0, 0,
-                &self->conn, 1, &self->current_mode->mode);
+        int width, height;
+        unsigned char* image =
+            SOIL_load_image("duck.png", &width, &height, 0, SOIL_LOAD_RGB);
 
-        ws_gbm_surface_release(self->gbm_surf);
-        test = 1;
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
+                     GL_UNSIGNED_BYTE, image);
+        SOIL_free_image_data(image);
+        ++test;
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
@@ -458,6 +464,45 @@ ws_monitor_redraw(
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         ws_log(&log_ctx, LOG_CRIT, "Framebuffer is not complete!");
         return 1;
+    }
+
+
+    if (test == 11) {
+        GLushort indices[4] = {0, 1, 2, 3};
+
+        // Format is x, y,  u, v
+        int x = 0;
+        int y = 0;
+        int height = self->current_mode->mode.vdisplay;
+        int width = self->current_mode->mode.hdisplay;
+        GLfloat v[] = {
+            x,            y,              0, 0,
+            x,            y + height,     0, 1,
+            x + width,    y,              1, 0,
+            x + width,    y + height,     1, 1
+        };
+
+        ws_texture_bind(&self->tmp.texture, GL_TEXTURE_2D);
+        glActiveTexture(GL_TEXTURE0);
+
+        ws_log(&log_ctx, LOG_DEBUG, "Drawing background with size: %dx%d", width,
+            height);
+
+        glBindBuffer(GL_ARRAY_BUFFER, self->tmp.vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(v), v, GL_STATIC_DRAW);
+
+        const GLint stride = 4 * sizeof(GLfloat);
+
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, 0);
+        glEnableVertexAttribArray(0);
+
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride,
+                (void*) (2 * sizeof(GLfloat)));
+        glEnableVertexAttribArray(1);
+
+        glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, indices);
+    } else {
+        ++test;
     }
 
     ws_set_select(&self->surfaces, NULL, NULL, redraw_surfaces, NULL);
